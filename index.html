@@ -267,6 +267,11 @@
   .campo-apta{ display:flex; align-items:center; gap:10px; cursor:pointer; font-size:13.5px; font-weight:600; padding:8px 0; }
   .campo-apta input{ width:20px; height:20px; }
 
+  .cadastro-aba{ min-height:200px; }
+  .cartao-form{ background:var(--superficie); border:1px solid var(--borda); border-radius:12px; padding:22px; }
+  .cartao-form-topo{ display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:18px; padding-bottom:14px; border-bottom:1px solid var(--borda); }
+  .cartao-form-topo h3{ font-family:var(--disp); text-transform:uppercase; letter-spacing:.4px; font-size:15px; }
+
   .selecao-estado{ display:flex; gap:8px; }
   .estado-opcao{
     flex:1; min-height:44px; padding:0 8px; border-radius:8px; border:1.5px solid var(--borda); background:var(--superficie-2);
@@ -343,10 +348,6 @@
     <button class="sidebar-item" id="sbCadastro" onclick="mostrarCadastro()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6a2 2 0 0 1 2 2v14a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V6a2 2 0 0 1 2-2z"/><line x1="12" y1="10" x2="12" y2="16"/><line x1="9" y1="13" x2="15" y2="13"/></svg>
       Cadastro
-    </button>
-    <button class="sidebar-item" id="sbResponsaveis" onclick="mostrarResponsaveis()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M2 20c0-3.5 3-6 7-6s7 2.5 7 6"/><circle cx="17" cy="9" r="2.2"/><path d="M16 14.2c2.6 0 4.8 1.8 4.8 4.8"/></svg>
-      Resp.
     </button>
   </nav>
 
@@ -457,90 +458,130 @@
     <!-- ===================== CADASTRO DE FERRAMENTA ===================== -->
     <div class="view" id="view-cadastro">
       <div class="secao-header">
-        <h2>Cadastro de ferramenta</h2>
+        <h2>Cadastro</h2>
+        <div class="modo-toggle">
+          <button class="modo-btn ativo" id="tabBtnFerramentas" onclick="mudarAbaCadastro('ferramentas')">Ferramentas</button>
+          <button class="modo-btn" id="tabBtnResponsaveis" onclick="mudarAbaCadastro('responsaveis')">Responsáveis</button>
+          <button class="modo-btn" id="tabBtnMotivos" onclick="mudarAbaCadastro('motivos')">Motivos</button>
+        </div>
       </div>
-      <div class="secao-corpo" style="max-width:640px;">
 
-        <div class="field"><label>Nome</label><input type="text" id="cfNome"></div>
-        <div class="field"><label>Descrição (o que produz)</label><textarea id="cfDescricao"></textarea></div>
+      <!-- ABA: FERRAMENTAS -->
+      <div class="cadastro-aba" id="abaFerramentas">
+        <div id="cfListaWrap">
+          <div class="search-row">
+            <input type="text" id="campoBuscaCadastro" placeholder="Buscar ferramenta..." oninput="renderizarListaCadastroFerramentas()">
+          </div>
+          <div class="lista-wrap" id="listaCadastroFerramentas" style="max-width:640px; margin:0 auto;"></div>
+        </div>
 
-        <div class="field-row">
-          <div class="field"><label>Data em que o molde foi criado</label><input type="date" id="cfDataCriacao"></div>
-          <div class="field">
-            <label>Trimestre atual (obrigatório)</label>
-            <div class="field-row" style="gap:8px;">
-              <select id="cfTrimQ" style="flex:1;">
-                <option value="Q1">1º trimestre</option>
-                <option value="Q2">2º trimestre</option>
-                <option value="Q3">3º trimestre</option>
-                <option value="Q4">4º trimestre</option>
+        <div id="cfFormWrap" style="display:none; max-width:640px; margin:16px auto 60px; padding:0 24px;">
+          <div class="cartao-form">
+            <div class="cartao-form-topo">
+              <h3 id="cfFormTitulo" style="margin:0;">Nova ferramenta</h3>
+              <button class="btn-icon" onclick="cancelarFormFerramenta()">← Voltar</button>
+            </div>
+
+            <div class="field"><label>Nome</label><input type="text" id="cfNome"></div>
+            <div class="field"><label>Descrição (o que produz)</label><textarea id="cfDescricao"></textarea></div>
+
+            <div class="field-row">
+              <div class="field"><label>Data em que o molde foi criado</label><input type="date" id="cfDataCriacao"></div>
+              <div class="field">
+                <label>Trimestre atual (obrigatório)</label>
+                <div class="field-row" style="gap:8px;">
+                  <select id="cfTrimQ" style="flex:1;">
+                    <option value="Q1">1º trimestre</option>
+                    <option value="Q2">2º trimestre</option>
+                    <option value="Q3">3º trimestre</option>
+                    <option value="Q4">4º trimestre</option>
+                  </select>
+                  <input type="number" id="cfTrimAno" style="flex:1;">
+                </div>
+              </div>
+            </div>
+
+            <div class="field">
+              <label>Estado inicial</label>
+              <select id="cfEstado">
+                <option value="verde">Verde — liberada</option>
+                <option value="amarela">Amarela — condicional</option>
+                <option value="vermelha">Vermelha — problemática</option>
               </select>
-              <input type="number" id="cfTrimAno" style="flex:1;">
+              <div class="field-hint" id="cfEstadoAviso" style="display:none; font-size:11px; color:var(--texto-secundario); margin-top:5px;">
+                Estado não editável aqui — use "Movimentação" pra mudar, assim fica registrado no histórico.
+              </div>
+            </div>
+
+            <div class="field">
+              <label>Fotos do estado atual</label>
+              <div class="file-input-wrap">
+                <label class="file-input-btn" for="cfFotos">📷 Escolher fotos</label>
+                <span class="file-input-name" id="cfFotosNome">Nenhuma foto selecionada</span>
+              </div>
+              <input type="file" id="cfFotos" accept="image/*" capture="environment" multiple class="file-input-hidden" onchange="previsualizarFotosCadastro()">
+              <div class="img-preview-row" id="cfFotosPreview"></div>
+            </div>
+
+            <div class="section-title">Checklist de inspeção</div>
+
+            <div class="field">
+              <label class="campo-apta"><input type="checkbox" id="cfCkPinoSuperior"><span>Pino superior verificado</span></label>
+            </div>
+            <div class="field">
+              <label class="campo-apta"><input type="checkbox" id="cfCkPinoInferior"><span>Pino inferior verificado</span></label>
+            </div>
+            <div class="field">
+              <label class="campo-apta"><input type="checkbox" id="cfPossuiConectas" onchange="alternarCampoConectas()"><span>Possui conectas</span></label>
+            </div>
+            <div class="field" id="cfWrapConectasEstado" style="display:none;">
+              <label>Estado das conectas</label>
+              <input type="text" id="cfConectasEstado" placeholder="Descreva o estado das conectas...">
+            </div>
+            <div class="field">
+              <label class="campo-apta"><input type="checkbox" id="cfCkLimpeza"><span>Ferramenta limpa</span></label>
+            </div>
+            <div class="field">
+              <label class="campo-apta"><input type="checkbox" id="cfCkProtetivo"><span>Protetivo passado</span></label>
+            </div>
+            <div class="field">
+              <label class="campo-apta"><input type="checkbox" id="cfCkParafusos"><span>Parafusos conferidos</span></label>
+            </div>
+            <div class="field">
+              <label class="campo-apta"><input type="checkbox" id="cfCkAperto"><span>Aperto conferido</span></label>
+            </div>
+
+            <div class="modal-actions" style="position:static; margin:20px 0 0; padding:0;">
+              <button class="btn btn-ghost" onclick="cancelarFormFerramenta()">Cancelar</button>
+              <button class="btn btn-primary" id="btnSalvarCadastroFerramenta" onclick="salvarCadastroFerramenta()">Cadastrar ferramenta</button>
             </div>
           </div>
         </div>
 
-        <div class="field">
-          <label>Estado inicial</label>
-          <select id="cfEstado">
-            <option value="verde">Verde — liberada</option>
-            <option value="amarela">Amarela — condicional</option>
-            <option value="vermelha">Vermelha — problemática</option>
-          </select>
-        </div>
+        <button class="fab" id="fabCadastroFerramenta" onclick="abrirFormFerramenta(null)" aria-label="Nova ferramenta">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+      </div>
 
-        <div class="field">
-          <label>Fotos do estado atual</label>
-          <div class="file-input-wrap">
-            <label class="file-input-btn" for="cfFotos">📷 Escolher fotos</label>
-            <span class="file-input-name" id="cfFotosNome">Nenhuma foto selecionada</span>
+      <!-- ABA: RESPONSÁVEIS -->
+      <div class="cadastro-aba" id="abaResponsaveis" style="display:none;">
+        <div class="secao-corpo">
+          <div class="simple-list" id="listaResponsaveis"></div>
+          <div class="form-add-responsavel">
+            <input type="text" id="novoResponsavelNome" placeholder="Nome do responsável">
+            <button class="btn btn-primary" onclick="adicionarResponsavel()">Adicionar</button>
           </div>
-          <input type="file" id="cfFotos" accept="image/*" capture="environment" multiple class="file-input-hidden" onchange="previsualizarFotosCadastro()">
-          <div class="img-preview-row" id="cfFotosPreview"></div>
         </div>
-
-        <div class="section-title">Checklist de inspeção</div>
-
-        <div class="field">
-          <label class="campo-apta"><input type="checkbox" id="cfCkPinoSuperior"><span>Pino superior verificado</span></label>
-        </div>
-        <div class="field">
-          <label class="campo-apta"><input type="checkbox" id="cfCkPinoInferior"><span>Pino inferior verificado</span></label>
-        </div>
-        <div class="field">
-          <label class="campo-apta"><input type="checkbox" id="cfPossuiConectas" onchange="alternarCampoConectas()"><span>Possui conectas</span></label>
-        </div>
-        <div class="field" id="cfWrapConectasEstado" style="display:none;">
-          <label>Estado das conectas</label>
-          <input type="text" id="cfConectasEstado" placeholder="Descreva o estado das conectas...">
-        </div>
-        <div class="field">
-          <label class="campo-apta"><input type="checkbox" id="cfCkLimpeza"><span>Ferramenta limpa</span></label>
-        </div>
-        <div class="field">
-          <label class="campo-apta"><input type="checkbox" id="cfCkProtetivo"><span>Protetivo passado</span></label>
-        </div>
-        <div class="field">
-          <label class="campo-apta"><input type="checkbox" id="cfCkParafusos"><span>Parafusos conferidos</span></label>
-        </div>
-        <div class="field">
-          <label class="campo-apta"><input type="checkbox" id="cfCkAperto"><span>Aperto conferido</span></label>
-        </div>
-
-        <button class="btn btn-primary btn-block" style="margin-top:8px;" onclick="salvarCadastroFerramenta()">Cadastrar ferramenta</button>
       </div>
-    </div>
 
-    <!-- ===================== RESPONSÁVEIS ===================== -->
-    <div class="view" id="view-responsaveis">
-      <div class="secao-header">
-        <h2>Responsáveis</h2>
-      </div>
-      <div class="secao-corpo">
-        <div class="simple-list" id="listaResponsaveis"></div>
-        <div class="form-add-responsavel">
-          <input type="text" id="novoResponsavelNome" placeholder="Nome do responsável">
-          <button class="btn btn-primary" onclick="adicionarResponsavel()">Adicionar</button>
+      <!-- ABA: MOTIVOS -->
+      <div class="cadastro-aba" id="abaMotivos" style="display:none;">
+        <div class="secao-corpo">
+          <div class="simple-list" id="listaMotivos"></div>
+          <div class="form-add-responsavel">
+            <input type="text" id="novoMotivoNome" placeholder="Nome do motivo / tipo de evento">
+            <button class="btn btn-primary" onclick="adicionarMotivo()">Adicionar</button>
+          </div>
         </div>
       </div>
     </div>
@@ -620,14 +661,7 @@
     <div class="field"><label>Responsável</label><select id="evResponsavel"></select></div>
     <div class="field">
       <label>Tipo de evento</label>
-      <select id="evTipo">
-        <option>Inspeção de saída da injetora</option>
-        <option>Jateamento / limpeza</option>
-        <option>Ajuste</option>
-        <option>Troca de componente</option>
-        <option>Mudança de etiqueta</option>
-        <option>Observação</option>
-      </select>
+      <select id="evTipo"></select>
     </div>
     <div class="field">
       <label>Estado da ferramenta (obrigatório)</label>
@@ -704,6 +738,7 @@ const ICONE_SVG = {
 
 let ferramentasCache = [];
 let responsaveisCache = [];
+let motivosCache = [];
 let ferramentaAtualId = null;
 
 /* ---------- trimestre calculado a partir do calendário ---------- */
@@ -787,10 +822,17 @@ function mostrarMovimentacao() {
   definirSidebar(true, 'sbMovimentacao');
   renderizarPickerFerramentas();
 }
-function mostrarResponsaveis() {
-  mostrarView('responsaveis');
-  definirSidebar(true, 'sbResponsaveis');
-  renderizarListaResponsaveis();
+function mudarAbaCadastro(aba) {
+  document.getElementById('tabBtnFerramentas').classList.toggle('ativo', aba === 'ferramentas');
+  document.getElementById('tabBtnResponsaveis').classList.toggle('ativo', aba === 'responsaveis');
+  document.getElementById('tabBtnMotivos').classList.toggle('ativo', aba === 'motivos');
+  document.getElementById('abaFerramentas').style.display = aba === 'ferramentas' ? 'block' : 'none';
+  document.getElementById('abaResponsaveis').style.display = aba === 'responsaveis' ? 'block' : 'none';
+  document.getElementById('abaMotivos').style.display = aba === 'motivos' ? 'block' : 'none';
+
+  if (aba === 'ferramentas') mostrarListaFerramentasCadastro();
+  if (aba === 'responsaveis') renderizarListaResponsaveis();
+  if (aba === 'motivos') renderizarListaMotivos();
 }
 
 function definirModoVisualizacao(modo) {
@@ -816,6 +858,13 @@ async function carregarResponsaveis() {
   const { data, error } = await sb.from('responsaveis').select('*').order('nome');
   if (error) { console.error(error); return; }
   responsaveisCache = data || [];
+}
+
+async function carregarMotivos() {
+  if (!sb) return;
+  const { data, error } = await sb.from('motivos').select('*').order('nome');
+  if (error) { console.error(error); return; }
+  motivosCache = data || [];
 }
 
 function atualizarKpis() {
@@ -1040,7 +1089,7 @@ function abrirModalEvento(id) {
 
   const select = document.getElementById('evResponsavel');
   select.innerHTML = responsaveisCache.filter(r => r.ativo).map(r => `<option value="${r.id}">${escapeHtml(r.nome)}</option>`).join('');
-  document.getElementById('evTipo').selectedIndex = 0;
+  document.getElementById('evTipo').innerHTML = motivosCache.filter(m => m.ativo).map(m => `<option>${escapeHtml(m.nome)}</option>`).join('');
   estadoEventoSelecionado = null;
   document.querySelectorAll('#evEstadoSelecao .estado-opcao').forEach(el => el.classList.remove('selecionado'));
   document.getElementById('evTexto').value = '';
@@ -1075,6 +1124,7 @@ async function salvarEvento() {
   if (!exigirSupabase()) return;
   if (!ferramentaAtualId) return;
   if (!estadoEventoSelecionado) { showToast('Selecione o estado da ferramenta', 'err'); return; }
+  if (!document.getElementById('evTipo').value) { showToast('Cadastre ao menos um motivo em Cadastro → Motivos', 'err'); return; }
 
   const btn = document.getElementById('btnSalvarEvento');
   btn.disabled = true;
@@ -1123,28 +1173,118 @@ async function salvarEvento() {
   }
 }
 
-/* ---------- cadastro de ferramenta (view completa) ---------- */
+/* ---------- cadastro de ferramenta (lista + criar/editar) ---------- */
 let arquivosCadastroSelecionados = [];
+let ferramentaEditandoId = null;
 
 function mostrarCadastro() {
   mostrarView('cadastro');
   definirSidebar(true, 'sbCadastro');
+  mudarAbaCadastro('ferramentas');
+}
 
-  document.getElementById('cfNome').value = '';
-  document.getElementById('cfDescricao').value = '';
-  document.getElementById('cfDataCriacao').value = '';
-  document.getElementById('cfTrimQ').selectedIndex = trimestreAtual().trimestre - 1;
-  document.getElementById('cfTrimAno').value = trimestreAtual().ano;
-  document.getElementById('cfEstado').value = 'verde';
+function mostrarListaFerramentasCadastro() {
+  ferramentaEditandoId = null;
+  document.getElementById('cfListaWrap').style.display = 'block';
+  document.getElementById('cfFormWrap').style.display = 'none';
+  document.getElementById('fabCadastroFerramenta').style.display = 'flex';
+  renderizarListaCadastroFerramentas();
+}
+
+function formatarDataSimples(iso) {
+  const [ano, mes, dia] = iso.split('-');
+  return `${dia}/${mes}/${ano}`;
+}
+
+function renderizarListaCadastroFerramentas() {
+  const busca = document.getElementById('campoBuscaCadastro').value.trim().toLowerCase();
+  const lista = ferramentasCache.filter(f => !busca || f.nome.toLowerCase().includes(busca));
+  const container = document.getElementById('listaCadastroFerramentas');
+  if (!lista.length) { container.innerHTML = emptyHintHtml('Nenhuma ferramenta cadastrada ainda'); return; }
+  container.innerHTML = lista.map(f => `
+    <div class="linha-ferramenta linha-${f.estado_atual}" onclick="abrirFormFerramenta('${f.id}')">
+      <div class="linha-corpo">
+        <div class="linha-nome">${escapeHtml(f.nome)}</div>
+        <div class="linha-descricao">${f.trimestre_cadastro ? escapeHtml(f.trimestre_cadastro) : 'sem trimestre'}${f.data_criacao ? ' · criada em ' + formatarDataSimples(f.data_criacao) : ''}</div>
+      </div>
+      <span class="pill ${f.apta_para_rodar ? 'pill-apta' : 'pill-nao-apta'}">${f.apta_para_rodar ? 'Apta' : 'Não apta'}</span>
+    </div>
+  `).join('');
+}
+
+function resetarFormFerramenta() {
+  arquivosCadastroSelecionados = [];
   document.getElementById('cfFotos').value = '';
   document.getElementById('cfFotosNome').textContent = 'Nenhuma foto selecionada';
   document.getElementById('cfFotosPreview').innerHTML = '';
-  arquivosCadastroSelecionados = [];
-
-  ['cfCkPinoSuperior', 'cfCkPinoInferior', 'cfPossuiConectas', 'cfCkLimpeza', 'cfCkProtetivo', 'cfCkParafusos', 'cfCkAperto']
-    .forEach(id => { document.getElementById(id).checked = false; });
   document.getElementById('cfConectasEstado').value = '';
   document.getElementById('cfWrapConectasEstado').style.display = 'none';
+}
+
+async function abrirFormFerramenta(id) {
+  ferramentaEditandoId = id;
+  document.getElementById('cfListaWrap').style.display = 'none';
+  document.getElementById('cfFormWrap').style.display = 'block';
+  document.getElementById('fabCadastroFerramenta').style.display = 'none';
+  resetarFormFerramenta();
+
+  if (!id) {
+    document.getElementById('cfFormTitulo').textContent = 'Nova ferramenta';
+    document.getElementById('btnSalvarCadastroFerramenta').textContent = 'Cadastrar ferramenta';
+    document.getElementById('cfNome').value = '';
+    document.getElementById('cfDescricao').value = '';
+    document.getElementById('cfDataCriacao').value = '';
+    document.getElementById('cfTrimQ').selectedIndex = trimestreAtual().trimestre - 1;
+    document.getElementById('cfTrimAno').value = trimestreAtual().ano;
+    document.getElementById('cfEstado').value = 'verde';
+    document.getElementById('cfEstado').disabled = false;
+    document.getElementById('cfEstadoAviso').style.display = 'none';
+    ['cfCkPinoSuperior', 'cfCkPinoInferior', 'cfPossuiConectas', 'cfCkLimpeza', 'cfCkProtetivo', 'cfCkParafusos', 'cfCkAperto']
+      .forEach(cid => { document.getElementById(cid).checked = false; });
+    return;
+  }
+
+  const f = ferramentasCache.find(x => x.id === id);
+  if (!f) return;
+
+  document.getElementById('cfFormTitulo').textContent = `Editar — ${f.nome}`;
+  document.getElementById('btnSalvarCadastroFerramenta').textContent = 'Salvar alterações';
+  document.getElementById('cfNome').value = f.nome || '';
+  document.getElementById('cfDescricao').value = f.descricao || '';
+  document.getElementById('cfDataCriacao').value = f.data_criacao || '';
+
+  if (f.trimestre_cadastro && f.trimestre_cadastro.includes('/')) {
+    const [q, ano] = f.trimestre_cadastro.split('/');
+    document.getElementById('cfTrimQ').value = q;
+    document.getElementById('cfTrimAno').value = ano;
+  } else {
+    document.getElementById('cfTrimQ').selectedIndex = trimestreAtual().trimestre - 1;
+    document.getElementById('cfTrimAno').value = trimestreAtual().ano;
+  }
+
+  document.getElementById('cfEstado').value = f.estado_atual;
+  document.getElementById('cfEstado').disabled = true;
+  document.getElementById('cfEstadoAviso').style.display = 'block';
+
+  document.getElementById('cfCkPinoSuperior').checked = !!f.check_pino_superior;
+  document.getElementById('cfCkPinoInferior').checked = !!f.check_pino_inferior;
+  document.getElementById('cfPossuiConectas').checked = !!f.possui_conectas;
+  document.getElementById('cfConectasEstado').value = f.conectas_estado || '';
+  document.getElementById('cfWrapConectasEstado').style.display = f.possui_conectas ? 'block' : 'none';
+  document.getElementById('cfCkLimpeza').checked = !!f.check_limpeza;
+  document.getElementById('cfCkProtetivo').checked = !!f.check_protetivo;
+  document.getElementById('cfCkParafusos').checked = !!f.check_parafusos;
+  document.getElementById('cfCkAperto').checked = !!f.check_aperto;
+
+  if (sb) {
+    const { data } = await sb.from('ferramenta_fotos_cadastro').select('*').eq('ferramenta_id', id).order('criado_em');
+    const preview = document.getElementById('cfFotosPreview');
+    preview.innerHTML = (data || []).map(foto => `<img src="${foto.url}" alt="Foto cadastrada">`).join('');
+  }
+}
+
+function cancelarFormFerramenta() {
+  mostrarListaFerramentasCadastro();
 }
 
 function alternarCampoConectas() {
@@ -1158,14 +1298,12 @@ function previsualizarFotosCadastro() {
     ? `${arquivosCadastroSelecionados.length} foto(s) selecionada(s)`
     : 'Nenhuma foto selecionada';
 
-  const preview = document.getElementById('cfFotosPreview');
-  preview.innerHTML = '';
   arquivosCadastroSelecionados.forEach(arquivo => {
     const reader = new FileReader();
     reader.onload = e => {
       const img = document.createElement('img');
       img.src = e.target.result;
-      preview.appendChild(img);
+      document.getElementById('cfFotosPreview').appendChild(img);
     };
     reader.readAsDataURL(arquivo);
   });
@@ -1181,15 +1319,11 @@ async function salvarCadastroFerramenta() {
   if (!trimAno) { showToast('Informe o ano do trimestre', 'err'); return; }
   const trimestreCadastro = `${trimQ}/${trimAno}`;
 
-  const estado = document.getElementById('cfEstado').value;
-
   const payload = {
     nome,
     descricao: document.getElementById('cfDescricao').value.trim() || null,
     data_criacao: document.getElementById('cfDataCriacao').value || null,
     trimestre_cadastro: trimestreCadastro,
-    estado_atual: estado,
-    apta_para_rodar: estado !== 'vermelha',
     check_pino_superior: document.getElementById('cfCkPinoSuperior').checked,
     check_pino_inferior: document.getElementById('cfCkPinoInferior').checked,
     possui_conectas: document.getElementById('cfPossuiConectas').checked,
@@ -1200,34 +1334,44 @@ async function salvarCadastroFerramenta() {
     check_aperto: document.getElementById('cfCkAperto').checked,
   };
 
-  const { data: novaFerramenta, error } = await sb.from('ferramentas').insert(payload).select().single();
+  const btn = document.getElementById('btnSalvarCadastroFerramenta');
+  const textoOriginal = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Salvando...';
 
-  if (error) {
-    showToast('Erro ao cadastrar ferramenta', 'err');
-    console.error(error);
-    return;
+  let ferramentaId = ferramentaEditandoId;
+
+  if (ferramentaId) {
+    const { error } = await sb.from('ferramentas').update(payload).eq('id', ferramentaId);
+    if (error) { showToast('Erro ao salvar', 'err'); console.error(error); btn.disabled = false; btn.textContent = textoOriginal; return; }
+  } else {
+    const estado = document.getElementById('cfEstado').value;
+    payload.estado_atual = estado;
+    payload.apta_para_rodar = estado !== 'vermelha';
+    const { data: nova, error } = await sb.from('ferramentas').insert(payload).select().single();
+    if (error) { showToast('Erro ao cadastrar ferramenta', 'err'); console.error(error); btn.disabled = false; btn.textContent = textoOriginal; return; }
+    ferramentaId = nova.id;
   }
 
   for (const arquivo of arquivosCadastroSelecionados) {
-    const caminho = `cadastro/${novaFerramenta.id}/${Date.now()}_${arquivo.name}`;
+    const caminho = `cadastro/${ferramentaId}/${Date.now()}_${arquivo.name}`;
     const { error: erroUpload } = await sb.storage.from(BUCKET_FOTOS).upload(caminho, arquivo);
     if (erroUpload) { console.error(erroUpload); continue; }
     const { data: urlData } = sb.storage.from(BUCKET_FOTOS).getPublicUrl(caminho);
-    await sb.from('ferramenta_fotos_cadastro').insert({ ferramenta_id: novaFerramenta.id, url: urlData.publicUrl });
+    await sb.from('ferramenta_fotos_cadastro').insert({ ferramenta_id: ferramentaId, url: urlData.publicUrl });
   }
 
-  showToast('Ferramenta cadastrada');
+  btn.disabled = false;
+  btn.textContent = textoOriginal;
+  showToast(ferramentaEditandoId ? 'Ferramenta atualizada' : 'Ferramenta cadastrada');
   await carregarFerramentas();
-  mostrarQuadro();
+  mostrarListaFerramentasCadastro();
 }
 
-/* ---------- responsáveis (seção) ---------- */
+/* ---------- responsáveis (aba) ---------- */
 function renderizarListaResponsaveis() {
   const container = document.getElementById('listaResponsaveis');
-  if (responsaveisCache.length === 0) {
-    container.innerHTML = '<div class="empty-hint">Nenhum responsável cadastrado ainda.</div>';
-    return;
-  }
+  if (responsaveisCache.length === 0) { container.innerHTML = emptyHintHtml('Nenhum responsável cadastrado ainda'); return; }
   container.innerHTML = responsaveisCache.map(r => `
     <div class="simple-row">
       <span class="${r.ativo ? '' : 'inativo'}">${escapeHtml(r.nome)}</span>
@@ -1256,12 +1400,44 @@ async function alternarResponsavel(id, novoValor) {
   renderizarListaResponsaveis();
 }
 
+/* ---------- motivos (aba) ---------- */
+function renderizarListaMotivos() {
+  const container = document.getElementById('listaMotivos');
+  if (motivosCache.length === 0) { container.innerHTML = emptyHintHtml('Nenhum motivo cadastrado ainda'); return; }
+  container.innerHTML = motivosCache.map(m => `
+    <div class="simple-row">
+      <span class="${m.ativo ? '' : 'inativo'}">${escapeHtml(m.nome)}</span>
+      <button class="btn-icon" onclick="alternarMotivo('${m.id}', ${!m.ativo})">${m.ativo ? 'Desativar' : 'Reativar'}</button>
+    </div>
+  `).join('');
+}
+
+async function adicionarMotivo() {
+  if (!exigirSupabase()) return;
+  const campo = document.getElementById('novoMotivoNome');
+  const nome = campo.value.trim();
+  if (!nome) return;
+  const { error } = await sb.from('motivos').insert({ nome });
+  if (error) { showToast('Erro ao adicionar', 'err'); console.error(error); return; }
+  campo.value = '';
+  await carregarMotivos();
+  renderizarListaMotivos();
+}
+
+async function alternarMotivo(id, novoValor) {
+  if (!exigirSupabase()) return;
+  const { error } = await sb.from('motivos').update({ ativo: novoValor }).eq('id', id);
+  if (error) { showToast('Erro ao atualizar', 'err'); console.error(error); return; }
+  await carregarMotivos();
+  renderizarListaMotivos();
+}
+
 /* ---------- inicialização ---------- */
 document.getElementById('topoApp').style.display = 'none';
 atualizarVisorTopbar();
 (async function init() {
   if (!sb) return;
-  await Promise.all([carregarFerramentas(), carregarResponsaveis()]);
+  await Promise.all([carregarFerramentas(), carregarResponsaveis(), carregarMotivos()]);
 })();
 </script>
 </body>
