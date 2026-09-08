@@ -264,8 +264,20 @@
   .field-row{ display:flex; gap:10px; }
   .field-row .field{ flex:1; min-width:0; }
   @media (max-width:480px){ .field-row{ flex-direction:column; } }
-  .campo-apta{ display:flex; align-items:center; gap:10px; cursor:pointer; font-size:13.5px; font-weight:600; padding:8px 0; }
+  .campo-apta{ display:flex; align-items:center; gap:10px; cursor:pointer; font-size:13.5px; font-weight:600; padding:8px 0; color:var(--texto); }
   .campo-apta input{ width:20px; height:20px; }
+
+  .checklist-item{
+    display:flex; align-items:center; gap:12px; padding:13px 14px; margin-bottom:8px; cursor:pointer;
+    background:var(--superficie-2); border:1px solid var(--borda); border-radius:10px; transition:border-color .15s ease, background .15s ease;
+  }
+  .checklist-item input{ width:20px; height:20px; flex-shrink:0; accent-color:var(--sucesso); }
+  .checklist-item span{ color:var(--texto); font-size:13.5px; font-weight:600; }
+  .checklist-item:has(input:checked){ border-color:var(--sucesso); background:rgba(22,163,74,0.1); }
+
+  .zona-perigo{ margin-top:20px; padding-top:16px; border-top:1px solid var(--borda); text-align:center; }
+  .btn-perigo{ border-color:var(--erro); color:var(--erro); }
+  .btn-perigo:hover{ background:rgba(220,38,38,0.1); border-color:var(--erro); color:var(--erro); }
 
   .cadastro-aba{ min-height:200px; }
   .cartao-form{ background:var(--superficie); border:1px solid var(--borda); border-radius:12px; padding:22px; }
@@ -525,35 +537,25 @@
 
             <div class="section-title">Checklist de inspeção</div>
 
-            <div class="field">
-              <label class="campo-apta"><input type="checkbox" id="cfCkPinoSuperior"><span>Pino superior verificado</span></label>
-            </div>
-            <div class="field">
-              <label class="campo-apta"><input type="checkbox" id="cfCkPinoInferior"><span>Pino inferior verificado</span></label>
-            </div>
-            <div class="field">
-              <label class="campo-apta"><input type="checkbox" id="cfPossuiConectas" onchange="alternarCampoConectas()"><span>Possui conectas</span></label>
-            </div>
+            <label class="checklist-item"><input type="checkbox" id="cfCkPinoSuperior"><span>Pino superior verificado</span></label>
+            <label class="checklist-item"><input type="checkbox" id="cfCkPinoInferior"><span>Pino inferior verificado</span></label>
+            <label class="checklist-item"><input type="checkbox" id="cfPossuiConectas" onchange="alternarCampoConectas()"><span>Possui conectas</span></label>
             <div class="field" id="cfWrapConectasEstado" style="display:none;">
               <label>Estado das conectas</label>
               <input type="text" id="cfConectasEstado" placeholder="Descreva o estado das conectas...">
             </div>
-            <div class="field">
-              <label class="campo-apta"><input type="checkbox" id="cfCkLimpeza"><span>Ferramenta limpa</span></label>
-            </div>
-            <div class="field">
-              <label class="campo-apta"><input type="checkbox" id="cfCkProtetivo"><span>Protetivo passado</span></label>
-            </div>
-            <div class="field">
-              <label class="campo-apta"><input type="checkbox" id="cfCkParafusos"><span>Parafusos conferidos</span></label>
-            </div>
-            <div class="field">
-              <label class="campo-apta"><input type="checkbox" id="cfCkAperto"><span>Aperto conferido</span></label>
-            </div>
+            <label class="checklist-item"><input type="checkbox" id="cfCkLimpeza"><span>Ferramenta limpa</span></label>
+            <label class="checklist-item"><input type="checkbox" id="cfCkProtetivo"><span>Protetivo passado</span></label>
+            <label class="checklist-item"><input type="checkbox" id="cfCkParafusos"><span>Parafusos conferidos</span></label>
+            <label class="checklist-item"><input type="checkbox" id="cfCkAperto"><span>Aperto conferido</span></label>
 
             <div class="modal-actions" style="position:static; margin:20px 0 0; padding:0;">
               <button class="btn btn-ghost" onclick="cancelarFormFerramenta()">Cancelar</button>
               <button class="btn btn-primary" id="btnSalvarCadastroFerramenta" onclick="salvarCadastroFerramenta()">Cadastrar ferramenta</button>
+            </div>
+
+            <div class="zona-perigo" id="cfZonaPerigo" style="display:none;">
+              <button class="btn-icon btn-perigo" onclick="excluirFerramentaAtual()">Excluir ferramenta</button>
             </div>
           </div>
         </div>
@@ -670,6 +672,18 @@
         <button type="button" class="estado-opcao amarela" data-estado="amarela" onclick="selecionarEstadoEvento('amarela')">Amarela</button>
         <button type="button" class="estado-opcao vermelha" data-estado="vermelha" onclick="selecionarEstadoEvento('vermelha')">Vermelha</button>
       </div>
+    </div>
+    <label class="checklist-item"><input type="checkbox" id="evTrocaTrimestre" onchange="alternarCampoTrimestreEvento()"><span>Troca de trimestre</span></label>
+    <div class="field-row" id="evWrapTrimestre" style="display:none;">
+      <div class="field"><label>Trimestre</label>
+        <select id="evTrimQ">
+          <option value="Q1">1º trimestre</option>
+          <option value="Q2">2º trimestre</option>
+          <option value="Q3">3º trimestre</option>
+          <option value="Q4">4º trimestre</option>
+        </select>
+      </div>
+      <div class="field"><label>Ano</label><input type="number" id="evTrimAno"></div>
     </div>
     <div class="field"><label>Descrição</label><textarea id="evTexto" placeholder="O que foi verificado ou feito..."></textarea></div>
     <div class="field">
@@ -1073,6 +1087,10 @@ function selecionarEstadoEvento(estado) {
   document.querySelectorAll('#evEstadoSelecao .estado-opcao').forEach(el => el.classList.toggle('selecionado', el.dataset.estado === estado));
 }
 
+function alternarCampoTrimestreEvento() {
+  document.getElementById('evWrapTrimestre').style.display = document.getElementById('evTrocaTrimestre').checked ? 'flex' : 'none';
+}
+
 function abrirModalEvento(id) {
   if (id) ferramentaAtualId = id;
   if (!ferramentaAtualId) return;
@@ -1092,6 +1110,10 @@ function abrirModalEvento(id) {
   document.getElementById('evTipo').innerHTML = motivosCache.filter(m => m.ativo).map(m => `<option>${escapeHtml(m.nome)}</option>`).join('');
   estadoEventoSelecionado = null;
   document.querySelectorAll('#evEstadoSelecao .estado-opcao').forEach(el => el.classList.remove('selecionado'));
+  document.getElementById('evTrocaTrimestre').checked = false;
+  document.getElementById('evWrapTrimestre').style.display = 'none';
+  document.getElementById('evTrimQ').selectedIndex = trimestreAtual().trimestre - 1;
+  document.getElementById('evTrimAno').value = trimestreAtual().ano;
   document.getElementById('evTexto').value = '';
   document.getElementById('evFotos').value = '';
   document.getElementById('evFotosNome').textContent = 'Nenhuma foto selecionada';
@@ -1126,6 +1148,10 @@ async function salvarEvento() {
   if (!estadoEventoSelecionado) { showToast('Selecione o estado da ferramenta', 'err'); return; }
   if (!document.getElementById('evTipo').value) { showToast('Cadastre ao menos um motivo em Cadastro → Motivos', 'err'); return; }
 
+  const trocaTrimestre = document.getElementById('evTrocaTrimestre').checked;
+  if (trocaTrimestre && !document.getElementById('evTrimAno').value) { showToast('Informe o ano do trimestre', 'err'); return; }
+  const novoTrimestre = trocaTrimestre ? `${document.getElementById('evTrimQ').value}/${document.getElementById('evTrimAno').value}` : null;
+
   const btn = document.getElementById('btnSalvarEvento');
   btn.disabled = true;
   btn.textContent = 'Salvando...';
@@ -1133,7 +1159,11 @@ async function salvarEvento() {
   const responsavelId = document.getElementById('evResponsavel').value || null;
   const tipoEvento = document.getElementById('evTipo').value;
   const estado = estadoEventoSelecionado;
-  const texto = document.getElementById('evTexto').value.trim();
+  let texto = document.getElementById('evTexto').value.trim();
+  if (trocaTrimestre) {
+    const notaTrimestre = `Trimestre atualizado para ${novoTrimestre}.`;
+    texto = texto ? `${texto} (${notaTrimestre})` : notaTrimestre;
+  }
 
   const { data: novoEvento, error } = await sb.from('historico_ferramenta').insert({
     ferramenta_id: ferramentaAtualId,
@@ -1157,6 +1187,11 @@ async function salvarEvento() {
     if (erroUpload) { console.error(erroUpload); continue; }
     const { data: urlData } = sb.storage.from(BUCKET_FOTOS).getPublicUrl(caminho);
     await sb.from('historico_fotos').insert({ historico_id: novoEvento.id, url: urlData.publicUrl });
+  }
+
+  if (trocaTrimestre) {
+    const { error: erroTrim } = await sb.from('ferramentas').update({ trimestre_cadastro: novoTrimestre }).eq('id', ferramentaAtualId);
+    if (erroTrim) console.error(erroTrim);
   }
 
   btn.disabled = false;
@@ -1239,6 +1274,7 @@ async function abrirFormFerramenta(id) {
     document.getElementById('cfEstado').value = 'verde';
     document.getElementById('cfEstado').disabled = false;
     document.getElementById('cfEstadoAviso').style.display = 'none';
+    document.getElementById('cfZonaPerigo').style.display = 'none';
     ['cfCkPinoSuperior', 'cfCkPinoInferior', 'cfPossuiConectas', 'cfCkLimpeza', 'cfCkProtetivo', 'cfCkParafusos', 'cfCkAperto']
       .forEach(cid => { document.getElementById(cid).checked = false; });
     return;
@@ -1265,6 +1301,7 @@ async function abrirFormFerramenta(id) {
   document.getElementById('cfEstado').value = f.estado_atual;
   document.getElementById('cfEstado').disabled = true;
   document.getElementById('cfEstadoAviso').style.display = 'block';
+  document.getElementById('cfZonaPerigo').style.display = 'block';
 
   document.getElementById('cfCkPinoSuperior').checked = !!f.check_pino_superior;
   document.getElementById('cfCkPinoInferior').checked = !!f.check_pino_inferior;
@@ -1284,6 +1321,23 @@ async function abrirFormFerramenta(id) {
 }
 
 function cancelarFormFerramenta() {
+  mostrarListaFerramentasCadastro();
+}
+
+async function excluirFerramentaAtual() {
+  if (!exigirSupabase()) return;
+  if (!ferramentaEditandoId) return;
+
+  const f = ferramentasCache.find(x => x.id === ferramentaEditandoId);
+  const nome = f ? f.nome : 'esta ferramenta';
+  const confirmado = confirm(`Excluir "${nome}" definitivamente?\n\nIsso apaga também todo o histórico de eventos e as fotos dela. Não tem como desfazer.`);
+  if (!confirmado) return;
+
+  const { error } = await sb.from('ferramentas').delete().eq('id', ferramentaEditandoId);
+  if (error) { showToast('Erro ao excluir ferramenta', 'err'); console.error(error); return; }
+
+  showToast('Ferramenta excluída');
+  await carregarFerramentas();
   mostrarListaFerramentasCadastro();
 }
 
