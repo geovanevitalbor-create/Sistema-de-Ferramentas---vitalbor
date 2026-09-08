@@ -558,12 +558,30 @@ const SUPABASE_URL = 'https://ujwdgblpbahbjetpjgag.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVqd2RnYmxwYmFoYmpldHBqZ2FnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg4NjQ0MTIsImV4cCI6MjEwNDQ0MDQxMn0.0rcwb0s0XEd_wpCjFIJ9UTQUaD_zXCqGPE_bDiJmcVA';
 
 let sb = null;
+let erroCarregamentoLib = false;
 if (!SUPABASE_URL.includes('PLACEHOLDER') && !SUPABASE_ANON_KEY.includes('PLACEHOLDER')) {
-  sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  try {
+    if (typeof supabase === 'undefined') throw new Error('Biblioteca @supabase/supabase-js não carregou (CDN bloqueado ou sem internet).');
+    sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  } catch (e) {
+    erroCarregamentoLib = true;
+    console.error('Falha ao iniciar o Supabase:', e);
+  }
 }
 
 function atualizarAvisoConfig() {
-  document.getElementById('avisoConfig').style.display = sb ? 'none' : 'block';
+  const aviso = document.getElementById('avisoConfig');
+  if (erroCarregamentoLib) {
+    aviso.textContent = 'Não foi possível carregar a biblioteca do Supabase (cdn.jsdelivr.net). Verifique a conexão com a internet ou se o CDN está bloqueado nesta rede, e recarregue a página.';
+    aviso.style.display = 'block';
+  } else {
+    aviso.style.display = sb ? 'none' : 'block';
+  }
+}
+
+function exigirSupabase() {
+  if (!sb) { showToast('Sem conexão com o banco de dados — recarregue a página', 'err'); return false; }
+  return true;
 }
 
 const BUCKET_FOTOS = 'ferramental-fotos';
@@ -807,6 +825,7 @@ async function abrirDetalhe(id) {
 }
 
 async function salvarCadastro() {
+  if (!exigirSupabase()) return;
   if (!ferramentaAtualId) return;
   const payload = {
     nome: document.getElementById('detNome').value.trim(),
@@ -820,6 +839,7 @@ async function salvarCadastro() {
 }
 
 async function salvarApta() {
+  if (!exigirSupabase()) return;
   if (!ferramentaAtualId) return;
   const valor = document.getElementById('detApta').checked;
   const { error } = await sb.from('ferramentas').update({ apta_para_rodar: valor }).eq('id', ferramentaAtualId);
@@ -897,6 +917,7 @@ function previsualizarFotos() {
 }
 
 async function salvarEvento() {
+  if (!exigirSupabase()) return;
   if (!ferramentaAtualId) return;
   const btn = document.getElementById('btnSalvarEvento');
   btn.disabled = true;
@@ -954,6 +975,7 @@ function abrirModalNovaFerramenta() {
 }
 
 async function salvarNovaFerramenta() {
+  if (!exigirSupabase()) return;
   const nome = document.getElementById('nfNome').value.trim();
   if (!nome) { showToast('Preencha o nome da ferramenta', 'err'); return; }
 
@@ -993,6 +1015,7 @@ function renderizarListaResponsaveis() {
 }
 
 async function adicionarResponsavel() {
+  if (!exigirSupabase()) return;
   const campo = document.getElementById('novoResponsavelNome');
   const nome = campo.value.trim();
   if (!nome) return;
@@ -1004,6 +1027,7 @@ async function adicionarResponsavel() {
 }
 
 async function alternarResponsavel(id, novoValor) {
+  if (!exigirSupabase()) return;
   const { error } = await sb.from('responsaveis').update({ ativo: novoValor }).eq('id', id);
   if (error) { showToast('Erro ao atualizar', 'err'); console.error(error); return; }
   await carregarResponsaveis();
