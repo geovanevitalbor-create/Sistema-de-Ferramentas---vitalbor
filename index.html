@@ -264,6 +264,16 @@
   .campo-apta{ display:flex; align-items:center; gap:10px; cursor:pointer; font-size:13.5px; font-weight:600; padding:8px 0; }
   .campo-apta input{ width:20px; height:20px; }
 
+  .selecao-estado{ display:flex; gap:8px; }
+  .estado-opcao{
+    flex:1; min-height:44px; padding:0 8px; border-radius:8px; border:1.5px solid var(--borda); background:var(--superficie-2);
+    color:var(--texto-secundario); font-family:var(--disp); font-weight:700; font-size:11.5px; text-transform:uppercase; letter-spacing:.3px; cursor:pointer;
+    transition:background .15s ease, border-color .15s ease, color .15s ease;
+  }
+  .estado-opcao.verde.selecionado{ background:rgba(22,163,74,0.18); border-color:var(--sucesso); color:var(--sucesso); }
+  .estado-opcao.amarela.selecionado{ background:rgba(251,191,36,0.18); border-color:var(--aviso); color:var(--aviso); }
+  .estado-opcao.vermelha.selecionado{ background:rgba(220,38,38,0.18); border-color:var(--erro); color:var(--erro); }
+
   .file-input-wrap{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:2px; }
   .file-input-hidden{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
   .file-input-btn{
@@ -479,9 +489,31 @@
       </label>
     </div>
     <button class="btn btn-primary btn-block" onclick="abrirModalEvento()">+ Registrar evento</button>
-    <div class="section-title">Histórico</div>
+    <div class="section-title">Últimos eventos</div>
     <div class="hist-timeline" id="timelineEventos"></div>
+    <button class="btn btn-ghost btn-block" id="btnVerHistoricoCompleto" onclick="abrirHistoricoCompleto()">Visualizar histórico completo</button>
     <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('overlayDetalhe')">Fechar</button></div>
+  </div>
+</div>
+
+<!-- ===================== MODAL: HISTÓRICO COMPLETO ===================== -->
+<div class="overlay" id="overlayHistoricoCompleto">
+  <div class="modal">
+    <h3 id="histCompletoTitulo">Histórico completo</h3>
+
+    <div class="visor">
+      <div class="visor-bloco">
+        <div class="visor-rotulo">Saiu para manutenção</div>
+        <div class="visor-trimestre" id="histSaiuManutencao" style="font-size:13px;">—</div>
+      </div>
+      <div class="visor-bloco">
+        <div class="visor-rotulo">Retornou em</div>
+        <div class="visor-trimestre" id="histRetornoManutencao" style="font-size:13px;">—</div>
+      </div>
+    </div>
+
+    <div class="hist-timeline" id="timelineEventosCompleto"></div>
+    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('overlayHistoricoCompleto')">Fechar</button></div>
   </div>
 </div>
 
@@ -510,6 +542,18 @@
 <div class="overlay" id="overlayEvento">
   <div class="modal">
     <h3 id="evTitulo">Registrar evento</h3>
+
+    <div class="visor">
+      <div class="visor-bloco">
+        <div class="visor-rotulo">Trimestre atual</div>
+        <div class="visor-trimestre" id="evVisorTrimestre">—</div>
+      </div>
+      <div class="visor-bloco">
+        <div class="visor-rotulo">Situação atual</div>
+        <div class="visor-situacao" id="evVisorSituacao"><span class="dot"></span><span>—</span></div>
+      </div>
+    </div>
+
     <div class="field"><label>Responsável</label><select id="evResponsavel"></select></div>
     <div class="field">
       <label>Tipo de evento</label>
@@ -523,13 +567,12 @@
       </select>
     </div>
     <div class="field">
-      <label>Alterar estado (opcional)</label>
-      <select id="evEstado">
-        <option value="">Manter estado atual</option>
-        <option value="verde">Verde — liberada</option>
-        <option value="amarela">Amarela — condicional</option>
-        <option value="vermelha">Vermelha — problemática</option>
-      </select>
+      <label>Estado da ferramenta (obrigatório)</label>
+      <div class="selecao-estado" id="evEstadoSelecao">
+        <button type="button" class="estado-opcao verde" data-estado="verde" onclick="selecionarEstadoEvento('verde')">Verde</button>
+        <button type="button" class="estado-opcao amarela" data-estado="amarela" onclick="selecionarEstadoEvento('amarela')">Amarela</button>
+        <button type="button" class="estado-opcao vermelha" data-estado="vermelha" onclick="selecionarEstadoEvento('vermelha')">Vermelha</button>
+      </div>
     </div>
     <div class="field"><label>Descrição</label><textarea id="evTexto" placeholder="O que foi verificado ou feito..."></textarea></div>
     <div class="field">
@@ -849,6 +892,22 @@ async function salvarApta() {
 }
 
 /* ---------- histórico ---------- */
+let historicoCompletoCache = [];
+
+function eventoHtml(ev) {
+  const cor = ev.estado_resultante ? ESTADO_COR_VAR[ev.estado_resultante] : 'var(--borda)';
+  const corTitulo = ev.estado_resultante ? cor : 'var(--texto-secundario)';
+  return `<div class="hist-step">
+    <div class="hist-step-dot" style="background:${cor};"></div>
+    <div class="hist-step-content">
+      <div class="hist-step-title" style="color:${corTitulo}">${escapeHtml(ev.tipo_evento)}${ev.estado_resultante ? ' → ' + ESTADO_LABEL[ev.estado_resultante] : ''}</div>
+      <div class="hist-step-meta">${formatarData(ev.criado_em)}${ev.responsaveis ? ' — ' + escapeHtml(ev.responsaveis.nome) : ''}</div>
+      ${ev.texto ? `<div class="hist-step-note">${escapeHtml(ev.texto)}</div>` : ''}
+      ${(ev.historico_fotos || []).map(f => `<a class="attach-thumb" href="${f.url}" target="_blank" rel="noopener"><img src="${f.url}" alt="Foto do evento" loading="lazy"></a>`).join('')}
+    </div>
+  </div>`;
+}
+
 async function carregarHistorico(ferramentaId) {
   const container = document.getElementById('timelineEventos');
   const { data, error } = await sb
@@ -857,26 +916,50 @@ async function carregarHistorico(ferramentaId) {
     .eq('ferramenta_id', ferramentaId)
     .order('criado_em', { ascending: false });
 
-  if (error) { container.innerHTML = '<div class="empty-hint">Erro ao carregar histórico.</div>'; console.error(error); return; }
-  if (!data || data.length === 0) { container.innerHTML = '<div class="empty-hint">Nenhum evento registrado ainda.</div>'; return; }
+  if (error) { container.innerHTML = '<div class="empty-hint">Erro ao carregar histórico.</div>'; console.error(error); historicoCompletoCache = []; return; }
 
-  container.innerHTML = data.map(ev => {
-    const cor = ev.estado_resultante ? ESTADO_COR_VAR[ev.estado_resultante] : 'var(--borda)';
-    const corTitulo = ev.estado_resultante ? cor : 'var(--texto-secundario)';
-    return `<div class="hist-step">
-      <div class="hist-step-dot" style="background:${cor};"></div>
-      <div class="hist-step-content">
-        <div class="hist-step-title" style="color:${corTitulo}">${escapeHtml(ev.tipo_evento)}${ev.estado_resultante ? ' → ' + ESTADO_LABEL[ev.estado_resultante] : ''}</div>
-        <div class="hist-step-meta">${formatarData(ev.criado_em)}${ev.responsaveis ? ' — ' + escapeHtml(ev.responsaveis.nome) : ''}</div>
-        ${ev.texto ? `<div class="hist-step-note">${escapeHtml(ev.texto)}</div>` : ''}
-        ${(ev.historico_fotos || []).map(f => `<a class="attach-thumb" href="${f.url}" target="_blank" rel="noopener"><img src="${f.url}" alt="Foto do evento" loading="lazy"></a>`).join('')}
-      </div>
-    </div>`;
-  }).join('');
+  historicoCompletoCache = data || [];
+
+  if (historicoCompletoCache.length === 0) {
+    container.innerHTML = '<div class="empty-hint">Nenhum evento registrado ainda.</div>';
+    document.getElementById('btnVerHistoricoCompleto').style.display = 'none';
+    return;
+  }
+
+  container.innerHTML = historicoCompletoCache.slice(0, 3).map(eventoHtml).join('');
+  document.getElementById('btnVerHistoricoCompleto').style.display = historicoCompletoCache.length > 3 ? 'block' : 'none';
+}
+
+/* ---------- histórico completo + datas de manutenção/retorno ---------- */
+function calcularPeriodoManutencao(eventosDesc) {
+  const idxSaiu = eventosDesc.findIndex(e => e.estado_resultante === 'vermelha');
+  if (idxSaiu === -1) return { saiu: null, retorno: null };
+  const saiu = eventosDesc[idxSaiu];
+  const candidato = idxSaiu > 0 ? eventosDesc[idxSaiu - 1] : null;
+  const retorno = (candidato && candidato.estado_resultante && candidato.estado_resultante !== 'vermelha') ? candidato : null;
+  return { saiu, retorno };
+}
+
+function abrirHistoricoCompleto() {
+  const f = ferramentasCache.find(x => x.id === ferramentaAtualId);
+  document.getElementById('histCompletoTitulo').textContent = f ? `Histórico completo — ${f.nome}` : 'Histórico completo';
+
+  const { saiu, retorno } = calcularPeriodoManutencao(historicoCompletoCache);
+  document.getElementById('histSaiuManutencao').textContent = saiu ? formatarData(saiu.criado_em) : 'Nunca esteve em manutenção';
+  document.getElementById('histRetornoManutencao').textContent = retorno ? formatarData(retorno.criado_em) : (saiu ? 'Ainda em manutenção' : '—');
+
+  document.getElementById('timelineEventosCompleto').innerHTML = historicoCompletoCache.map(eventoHtml).join('');
+  openModal('overlayHistoricoCompleto');
 }
 
 /* ---------- modal: registrar evento ---------- */
 let arquivosEventoSelecionados = [];
+let estadoEventoSelecionado = null;
+
+function selecionarEstadoEvento(estado) {
+  estadoEventoSelecionado = estado;
+  document.querySelectorAll('#evEstadoSelecao .estado-opcao').forEach(el => el.classList.toggle('selecionado', el.dataset.estado === estado));
+}
 
 function abrirModalEvento(id) {
   if (id) ferramentaAtualId = id;
@@ -884,10 +967,19 @@ function abrirModalEvento(id) {
   const f = ferramentasCache.find(x => x.id === ferramentaAtualId);
   document.getElementById('evTitulo').textContent = f ? `Registrar evento — ${f.nome}` : 'Registrar evento';
 
+  document.getElementById('evVisorTrimestre').textContent = trimestreLabel();
+  const situacao = document.getElementById('evVisorSituacao');
+  if (f) {
+    situacao.innerHTML = `<span class="dot" style="background:${ESTADO_COR_VAR[f.estado_atual]};"></span><span style="color:${ESTADO_COR_VAR[f.estado_atual]}">${ESTADO_LABEL[f.estado_atual]} — ${f.apta_para_rodar ? 'apta pra uso' : 'não apta, precisa de atenção'}</span>`;
+  } else {
+    situacao.innerHTML = '<span class="dot"></span><span>—</span>';
+  }
+
   const select = document.getElementById('evResponsavel');
   select.innerHTML = responsaveisCache.filter(r => r.ativo).map(r => `<option value="${r.id}">${escapeHtml(r.nome)}</option>`).join('');
   document.getElementById('evTipo').selectedIndex = 0;
-  document.getElementById('evEstado').value = '';
+  estadoEventoSelecionado = null;
+  document.querySelectorAll('#evEstadoSelecao .estado-opcao').forEach(el => el.classList.remove('selecionado'));
   document.getElementById('evTexto').value = '';
   document.getElementById('evFotos').value = '';
   document.getElementById('evFotosNome').textContent = 'Nenhuma foto selecionada';
@@ -919,13 +1011,15 @@ function previsualizarFotos() {
 async function salvarEvento() {
   if (!exigirSupabase()) return;
   if (!ferramentaAtualId) return;
+  if (!estadoEventoSelecionado) { showToast('Selecione o estado da ferramenta', 'err'); return; }
+
   const btn = document.getElementById('btnSalvarEvento');
   btn.disabled = true;
   btn.textContent = 'Salvando...';
 
   const responsavelId = document.getElementById('evResponsavel').value || null;
   const tipoEvento = document.getElementById('evTipo').value;
-  const estado = document.getElementById('evEstado').value || null;
+  const estado = estadoEventoSelecionado;
   const texto = document.getElementById('evTexto').value.trim();
 
   const { data: novoEvento, error } = await sb.from('historico_ferramenta').insert({
