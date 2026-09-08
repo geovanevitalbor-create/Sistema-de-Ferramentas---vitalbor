@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes">
+<title>Ferramental — Universal Juntas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --verde-oficial:#00833E;      /* verde da marca, referência — não usado direto na UI */
+    --verde-principal:#00C46A;    /* ajustado pro fundo escuro, igual ao Controle de Mecânicos */
+    --verde-escuro:#00642F;
+    --verde-claro:#DFF2E6;
+    --verde-profundo:#003A1C;
+    --texto-sobre-acento:#07130D;
+
+    --cinza-escuro:#2B2B2B;
+    --cinza-medio:#6B6B6B;
+    --cinza-claro:#E6E6E6;
+    --cinza-suave:#5F5F5F;
+    --branco:#FFFFFF;
+
+    --sucesso:#16A34A;
+    --aviso:#FBBF24;
+    --erro:#DC2626;
+    --info:#2563EB;
+
+    --bg:#12151A;
+    --superficie:#1B2027;
+    --superficie-2:#20262E;
+    --borda:#2A2F38;
+    --texto:#EDEFF2;
+    --texto-secundario:#9AA0A6;
+    --erro-suave:#FF8A8D;
+    --info-suave:#6FA0F5;
+
+    --mono:'JetBrains Mono', monospace;
+    --disp:'Oswald', sans-serif;
+    --body:'Inter', sans-serif;
+
+    --topbar-h:64px;
+    --sidebar-w:84px;
+  }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--bg); color:var(--texto); font-family:var(--body); -webkit-font-smoothing:antialiased; }
+
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
+    padding:10px 24px; background:var(--superficie); border-bottom:3px solid var(--verde-principal);
+    position:sticky; top:0; z-index:30; height:var(--topbar-h);
+  }
+  .brand h1{ font-family:var(--disp); font-weight:700; font-size:19px; letter-spacing:0.5px; margin:0; text-transform:uppercase; }
+  .brand span{ color:var(--texto-secundario); font-size:11.5px; font-family:var(--mono); }
+  .visor-mini{ font-family:var(--mono); font-size:12.5px; color:var(--verde-claro); background:rgba(0,131,62,0.16); padding:5px 10px; border-radius:6px; letter-spacing:.3px; }
+
+  /* ---- casca do app: sidebar + conteúdo ---- */
+  .app-shell{ display:flex; align-items:stretch; min-height:calc(100vh - var(--topbar-h)); }
+
+  .sidebar{
+    display:none; flex-direction:column;
+    width:var(--sidebar-w); flex-shrink:0; background:var(--superficie); border-right:1px solid var(--borda);
+    position:sticky; top:var(--topbar-h); height:calc(100vh - var(--topbar-h)); z-index:15; padding-top:8px;
+  }
+  .sidebar.ativa{ display:flex; }
+  .sidebar-marca{ width:30px; height:30px; border-radius:9px; background:var(--verde-principal); margin:4px auto 14px; box-shadow:0 0 16px -4px var(--verde-principal); }
+  .sidebar-item{
+    display:flex; flex-direction:column; align-items:center; gap:5px; padding:14px 4px;
+    background:transparent; border:none; border-left:3px solid transparent; color:var(--texto-secundario); cursor:pointer;
+    font-family:var(--disp); font-size:9.5px; font-weight:600; text-transform:uppercase; letter-spacing:.3px;
+  }
+  .sidebar-item svg{ width:20px; height:20px; }
+  .sidebar-item:hover{ color:var(--texto); }
+  .sidebar-item.ativo{ color:var(--verde-principal); background:rgba(0,131,62,0.08); border-left-color:var(--verde-principal); }
+
+  .conteudo-principal{ flex:1; min-width:0; }
+
+  .view{ display:none; padding-bottom:80px; }
+  .view.ativa{ display:block; }
+  .splash-wrap{ display:flex; align-items:center; justify-content:center; min-height:60vh; }
+
+  button.btn{
+    font-family:var(--disp); font-weight:600; font-size:13px; letter-spacing:.4px; text-transform:uppercase;
+    border:none; border-radius:999px; padding:13px 24px; cursor:pointer;
+    transition:transform .1s ease, box-shadow .15s ease, opacity .15s ease, background .15s ease;
+  }
+  button.btn:active{ transform:scale(0.96); }
+  button.btn:disabled{ opacity:.55; cursor:not-allowed; transform:none !important; }
+  .btn-primary{ background:var(--verde-principal); color:var(--texto-sobre-acento); box-shadow:0 0 22px -6px var(--verde-principal); }
+  .btn-primary:hover{ box-shadow:0 0 30px -4px var(--verde-principal); }
+  .btn-ghost{ background:transparent; color:var(--texto); border:1px solid var(--borda); }
+  .btn-ghost:hover{ border-color:var(--verde-principal); color:var(--verde-principal); }
+  .btn-block{ width:100%; }
+  .btn-icon{
+    background:transparent; border:1px solid var(--borda); color:var(--texto-secundario);
+    font-family:var(--body); font-size:12px; font-weight:600; padding:0 16px; min-height:44px; display:inline-flex; align-items:center; border-radius:999px; cursor:pointer;
+  }
+  .btn-icon:hover{ color:var(--verde-principal); border-color:var(--verde-principal); }
+
+  /* ---- Home ---- */
+  .kpi-grid{ display:grid; grid-template-columns:repeat(5, 1fr); gap:14px; padding:18px 24px 0; }
+  @media (max-width:920px){ .kpi-grid{ grid-template-columns:repeat(3, 1fr); } }
+  @media (max-width:560px){ .kpi-grid{ grid-template-columns:repeat(2, 1fr); } }
+  .kpi-card{ position:relative; background:var(--superficie); border:1px solid var(--borda); border-radius:8px; padding:14px 16px; border-top:4px solid var(--kpi-cor, var(--verde-principal)); overflow:hidden; }
+  .kpi-icone{ position:absolute; top:12px; right:12px; width:26px; height:26px; border-radius:50%; background:rgba(255,255,255,0.05); color:var(--kpi-cor); display:flex; align-items:center; justify-content:center; }
+  .kpi-icone svg{ width:13px; height:13px; }
+  .kpi-valor{ font-family:var(--mono); font-size:24px; font-weight:700; color:var(--texto); }
+  .kpi-label{ font-size:10.5px; color:var(--texto-secundario); text-transform:uppercase; letter-spacing:.6px; margin-top:4px; max-width:80%; }
+
+  .home-grid{ display:grid; grid-template-columns:repeat(2, 1fr); gap:16px; max-width:520px; margin:28px auto 0; padding:0 24px; }
+  .home-card{
+    background:var(--superficie); border:1px solid var(--borda); border-radius:14px;
+    padding:30px 14px; display:flex; flex-direction:column; align-items:center; gap:14px;
+    cursor:pointer; color:var(--texto); font-family:inherit; text-align:center; transition:border-color .15s ease, transform .15s ease;
+  }
+  .home-card:hover{ border-color:var(--verde-principal); transform:translateY(-2px); }
+  .home-card-icone{ width:52px; height:52px; border-radius:50%; background:rgba(0,131,62,0.14); color:var(--verde-principal); display:flex; align-items:center; justify-content:center; }
+  .home-card-icone svg{ width:26px; height:26px; }
+  .home-card-label{ font-family:var(--disp); font-weight:600; font-size:13px; text-transform:uppercase; letter-spacing:.3px; line-height:1.35; }
+
+  /* ---- Cabeçalho de seção ---- */
+  .secao-header{ display:flex; align-items:center; justify-content:space-between; padding:20px 24px 0; flex-wrap:wrap; gap:10px; }
+  .secao-header h2{ font-family:var(--disp); text-transform:uppercase; font-size:15px; margin:0; letter-spacing:.4px; color:var(--texto); }
+  .modo-toggle{ display:flex; gap:4px; background:var(--superficie-2); border-radius:999px; padding:4px; }
+  .modo-btn{ border:none; background:transparent; color:var(--texto-secundario); font-family:var(--disp); font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.4px; padding:0 16px; min-height:44px; display:inline-flex; align-items:center; border-radius:999px; cursor:pointer; }
+  .modo-btn.ativo{ background:var(--verde-principal); color:var(--branco); }
+
+  .search-row{ padding:16px 24px 0; }
+  .search-row input{
+    width:100%; max-width:340px; background:var(--superficie-2); border:1px solid var(--borda); color:var(--texto);
+    padding:10px 14px; border-radius:8px; font-family:var(--body); font-size:14px;
+  }
+  .search-row input:focus{ outline:none; border-color:var(--verde-principal); }
+
+  /* ---- Kanban ---- */
+  .board-wrap{ padding:16px 24px 60px; }
+  .board{ display:flex; gap:16px; align-items:flex-start; overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:6px; }
+  .column{ flex:1 1 260px; min-width:260px; border-radius:8px; border:1px solid var(--borda); min-height:200px; }
+  .col-vermelha{ background:rgba(220,38,38,0.045); }
+  .col-amarela{ background:rgba(251,191,36,0.045); }
+  .col-verde{ background:rgba(22,163,74,0.045); }
+  .column-head{ padding:14px 16px; border-bottom:1px solid var(--borda); display:flex; align-items:center; justify-content:space-between; gap:6px; }
+  .column-head h2{ font-family:var(--disp); font-size:14px; letter-spacing:.8px; text-transform:uppercase; margin:0; font-weight:600; }
+  .col-vermelha h2{ color:var(--erro); }
+  .col-amarela h2{ color:var(--aviso); }
+  .col-verde h2{ color:var(--sucesso); }
+  .count-badge{ font-family:var(--mono); font-size:12px; background:var(--superficie-2); padding:2px 8px; border-radius:10px; color:var(--texto-secundario); }
+  .coluna-corpo{ padding:10px; min-height:120px; }
+  .empty-hint{
+    padding:28px 20px; text-align:center; color:var(--texto-secundario); font-size:12.5px; font-family:var(--body);
+    border:1px dashed var(--borda); border-radius:12px;
+  }
+  .empty-hint svg{ width:26px; height:26px; margin-bottom:10px; opacity:.55; display:block; margin-left:auto; margin-right:auto; }
+
+  .ferramenta-card{
+    position:relative; background:var(--superficie); cursor:pointer;
+    border:1px solid var(--card-color, var(--borda)); border-radius:18px;
+    margin-bottom:14px; padding:13px 14px;
+    box-shadow:0 0 0 1px rgba(255,255,255,0.02) inset, 0 10px 24px -12px rgba(0,0,0,.6), 0 0 26px -6px var(--card-glow, transparent), var(--critica-ring, 0 0 #0000);
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .ferramenta-card:hover{
+    transform:translateY(-2px);
+    box-shadow:0 0 0 1px rgba(255,255,255,0.03) inset, 0 16px 32px -12px rgba(0,0,0,.7), 0 0 34px -4px var(--card-glow, transparent), var(--critica-ring, 0 0 #0000);
+  }
+  .estado-vermelha{ --card-color:rgba(220,38,38,0.4); --card-glow:rgba(220,38,38,0.26); }
+  .estado-amarela{ --card-color:rgba(251,191,36,0.4); --card-glow:rgba(251,191,36,0.22); }
+  .estado-verde{ --card-color:rgba(22,163,74,0.4); --card-glow:rgba(22,163,74,0.24); }
+  .ferramenta-card.nao-apta{ --critica-ring:0 0 0 2px rgba(220,38,38,0.7); }
+
+  .card-top{ display:flex; align-items:flex-start; gap:9px; }
+  .status-icon{ width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
+  .status-icon svg{ width:13px; height:13px; }
+  .status-icon.sucesso{ background:rgba(22,163,74,0.16); color:var(--sucesso); }
+  .status-icon.aviso{ background:rgba(251,191,36,0.16); color:var(--aviso); }
+  .status-icon.erro{ background:rgba(220,38,38,0.16); color:var(--erro); }
+  .card-top-texto{ flex:1; min-width:0; }
+  .card-nome{ font-family:var(--disp); font-weight:600; font-size:16px; color:var(--texto); }
+  .card-descricao{ font-size:12px; color:var(--texto-secundario); margin-top:3px; }
+  .card-tags{ display:flex; gap:6px; margin-top:9px; flex-wrap:wrap; align-items:center; padding-left:33px; }
+  .pill{ display:inline-flex; align-items:center; gap:4px; font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; padding:3px 8px; border-radius:10px; }
+  .pill-apta{ background:var(--verde-claro); color:var(--verde-profundo); }
+  .pill-nao-apta{ background:rgba(220,38,38,0.16); color:var(--erro-suave); }
+  .pill-trimestre{ background:rgba(37,99,235,0.14); color:var(--info-suave); font-family:var(--mono); }
+  .pulso{ width:6px; height:6px; border-radius:50%; background:currentColor; animation:pulse 1.1s infinite; }
+  @keyframes pulse{ 0%,100%{ opacity:1; } 50%{ opacity:.25; } }
+
+  /* ---- Lista ---- */
+  .lista-wrap{ padding:16px 24px 60px; }
+  .linha-ferramenta{
+    background:var(--superficie); border:1px solid var(--borda); border-left:4px solid var(--linha-cor, var(--borda));
+    border-radius:10px; padding:12px 14px; margin-bottom:10px; cursor:pointer;
+    display:flex; align-items:center; gap:12px; transition:border-color .15s ease;
+  }
+  .linha-ferramenta:hover{ border-color:var(--verde-principal); }
+  .linha-vermelha{ --linha-cor:var(--erro); }
+  .linha-amarela{ --linha-cor:var(--aviso); }
+  .linha-verde{ --linha-cor:var(--sucesso); }
+  .linha-corpo{ flex:1; min-width:0; }
+  .linha-nome{ font-family:var(--disp); font-weight:600; font-size:15px; color:var(--texto); }
+  .linha-descricao{ font-size:12px; color:var(--texto-secundario); margin-top:2px; }
+
+  /* ---- FAB ---- */
+  .fab{
+    position:fixed; right:20px; bottom:24px; width:56px; height:56px; border-radius:50%;
+    background:var(--verde-principal); color:var(--branco); border:none; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 10px 26px -6px rgba(0,131,62,0.65); z-index:15; transition:background .15s ease, transform .1s ease;
+  }
+  .fab svg{ width:26px; height:26px; }
+  .fab:hover{ background:var(--verde-escuro); }
+  .fab:active{ transform:scale(.92); }
+
+  /* ---- Picker (nova movimentação) ---- */
+  .picker-lista{ padding:16px 24px 60px; max-width:640px; margin:0 auto; display:flex; flex-direction:column; gap:8px; }
+  .picker-item{ background:var(--superficie); border:1px solid var(--borda); border-radius:10px; padding:12px 14px; display:flex; align-items:center; gap:10px; cursor:pointer; transition:border-color .15s ease; }
+  .picker-item:hover{ border-color:var(--verde-principal); }
+  .status-dot{ width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+  .status-dot.sucesso{ background:var(--sucesso); }
+  .status-dot.aviso{ background:var(--aviso); }
+  .status-dot.erro{ background:var(--erro); }
+  .picker-nome{ flex:1; font-family:var(--disp); font-weight:600; font-size:14px; color:var(--texto); }
+  .picker-situacao{ font-size:10px; text-transform:uppercase; font-weight:700; letter-spacing:.4px; color:var(--texto-secundario); white-space:nowrap; }
+
+  /* ---- Responsáveis (seção) ---- */
+  .secao-corpo{ padding:16px 24px 60px; max-width:520px; margin:0 auto; }
+  .simple-list{ display:flex; flex-direction:column; gap:10px; }
+  .simple-row{ background:var(--superficie); border:1px solid var(--borda); border-radius:8px; padding:12px 14px; display:flex; justify-content:space-between; align-items:center; gap:10px; font-size:14px; }
+  .simple-row .inativo{ color:var(--texto-secundario); text-decoration:line-through; }
+  .form-add-responsavel{ display:flex; gap:8px; margin-top:16px; }
+  .form-add-responsavel input{
+    flex:1; background:var(--superficie-2); border:1px solid var(--borda); color:var(--texto);
+    padding:10px 12px; border-radius:8px; font-family:var(--body); font-size:14px;
+  }
+  .form-add-responsavel input:focus{ outline:none; border-color:var(--verde-principal); }
+
+  /* ---- Visor (trimestre + situação) ---- */
+  .visor{
+    background:var(--bg); border:1px solid var(--borda); border-radius:10px;
+    padding:14px 16px; display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:16px; flex-wrap:wrap;
+  }
+  .visor-bloco .visor-rotulo{ font-size:10px; color:var(--texto-secundario); text-transform:uppercase; letter-spacing:.5px; margin-bottom:3px; }
+  .visor-trimestre{ font-family:var(--mono); font-size:16px; font-weight:700; color:var(--texto); letter-spacing:.3px; }
+  .visor-situacao{ display:flex; align-items:center; gap:7px; font-family:var(--disp); font-weight:700; text-transform:uppercase; font-size:14px; }
+  .visor-situacao .dot{ width:9px; height:9px; border-radius:50%; }
+
+  /* ---- Overlay / modal ---- */
+  .overlay{ position:fixed; inset:0; background:rgba(0,0,0,0.72); display:none; align-items:center; justify-content:center; z-index:50; padding:16px; }
+  .overlay.show{ display:flex; }
+  .modal{ background:var(--superficie); border:1px solid var(--borda); border-radius:8px; width:100%; max-width:480px; padding:18px; max-height:90vh; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+  .modal h3{ font-family:var(--disp); text-transform:uppercase; letter-spacing:.5px; margin:0 0 14px; font-size:16px; }
+  .section-title{ font-family:var(--disp); text-transform:uppercase; letter-spacing:.5px; font-size:13px; color:var(--texto-secundario); margin:20px 0 10px; }
+  .modal-actions{ display:flex; justify-content:flex-end; gap:10px; margin-top:16px; position:sticky; bottom:-18px; background:var(--superficie); padding:12px 0 4px; margin-bottom:-18px; }
+
+  .field{ margin-bottom:12px; }
+  .field label{ display:block; font-size:12px; color:var(--texto-secundario); margin-bottom:4px; }
+  .field select, .field input, .field textarea{
+    width:100%; background:var(--superficie-2); border:1px solid var(--borda); color:var(--texto);
+    padding:10px; border-radius:4px; font-family:var(--body); font-size:14px;
+  }
+  .field select:focus, .field input:focus, .field textarea:focus{ outline:none; border-color:var(--verde-principal); }
+  .field textarea{ resize:vertical; min-height:70px; }
+  .campo-apta{ display:flex; align-items:center; gap:10px; cursor:pointer; font-size:13.5px; font-weight:600; padding:8px 0; }
+  .campo-apta input{ width:20px; height:20px; }
+
+  .file-input-wrap{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:2px; }
+  .file-input-hidden{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+  .file-input-btn{
+    display:inline-flex; align-items:center; gap:6px; background:var(--superficie-2); border:1px solid var(--borda); color:var(--texto);
+    font-family:var(--body); font-size:12.5px; font-weight:600; padding:0 16px; min-height:44px; border-radius:4px; cursor:pointer;
+    transition:border-color .15s ease, color .15s ease;
+  }
+  .file-input-btn:hover{ border-color:var(--verde-principal); color:var(--verde-principal); }
+  .file-input-name{ font-size:11.5px; color:var(--texto-secundario); }
+  .img-preview-row{ display:flex; align-items:center; gap:8px; margin-top:8px; flex-wrap:wrap; }
+  .img-preview-row img{ width:56px; height:56px; object-fit:cover; border-radius:6px; border:1px solid var(--borda); }
+
+  .hist-timeline{ display:flex; flex-direction:column; gap:16px; margin:14px 0; }
+  .hist-step{ display:flex; gap:12px; }
+  .hist-step-dot{ width:12px; height:12px; border-radius:50%; margin-top:5px; flex-shrink:0; }
+  .hist-step-content{ flex:1; min-width:0; }
+  .hist-step-title{ font-family:var(--disp); font-weight:600; font-size:13px; text-transform:uppercase; letter-spacing:.4px; }
+  .hist-step-meta{ font-size:11px; color:var(--texto-secundario); margin-top:2px; }
+  .hist-step-note{ font-size:12.5px; color:var(--texto); margin-top:6px; background:var(--superficie-2); padding:8px 10px; border-radius:6px; white-space:pre-wrap; }
+  .attach-thumb{ display:inline-block; margin-top:8px; margin-right:6px; border-radius:6px; overflow:hidden; border:1px solid var(--borda); cursor:pointer; }
+  .attach-thumb img{ display:block; width:64px; height:64px; object-fit:cover; }
+
+  .toast{
+    position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+    background:var(--superficie-2); border:1px solid var(--borda); padding:10px 18px;
+    border-radius:6px; font-size:13px; z-index:60; display:none; font-family:var(--mono); max-width:90vw; text-align:center;
+  }
+  .toast.show{ display:block; }
+  .toast.err{ border-color:var(--erro); color:var(--erro); }
+
+  .aviso-config{
+    background:rgba(251,191,36,0.1); border:1px solid var(--aviso); color:var(--aviso);
+    padding:12px 24px; font-size:13px; display:none;
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar" id="topoApp">
+  <div class="brand">
+    <h1>Ferramental</h1>
+    <span>Universal Juntas</span>
+  </div>
+  <span class="visor-mini" id="visorMiniTopbar">—</span>
+</header>
+
+<div class="aviso-config" id="avisoConfig">Configure SUPABASE_URL e SUPABASE_ANON_KEY no início do script antes de usar.</div>
+
+<div class="app-shell">
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-marca"></div>
+    <button class="sidebar-item" id="sbInicio" onclick="mostrarHome()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+      Início
+    </button>
+    <button class="sidebar-item" id="sbQuadro" onclick="mostrarQuadro()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="5" height="16" rx="1"/><rect x="9.5" y="4" width="5" height="10" rx="1"/><rect x="16" y="4" width="5" height="13" rx="1"/></svg>
+      Quadro
+    </button>
+    <button class="sidebar-item" id="sbMovimentacao" onclick="mostrarMovimentacao()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h13M4 7l4-4M4 7l4 4"/><path d="M20 17H7M20 17l-4-4M20 17l-4 4"/></svg>
+      Movimentação
+    </button>
+    <button class="sidebar-item" id="sbResponsaveis" onclick="mostrarResponsaveis()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M2 20c0-3.5 3-6 7-6s7 2.5 7 6"/><circle cx="17" cy="9" r="2.2"/><path d="M16 14.2c2.6 0 4.8 1.8 4.8 4.8"/></svg>
+      Resp.
+    </button>
+  </nav>
+
+  <main class="conteudo-principal">
+
+    <!-- ===================== SPLASH ===================== -->
+    <div class="view ativa" id="view-splash">
+      <div class="splash-wrap">
+        <button class="btn btn-primary" style="padding:18px 52px; font-size:15px;" onclick="mostrarHome()">Iniciar</button>
+      </div>
+    </div>
+
+    <!-- ===================== HOME ===================== -->
+    <div class="view" id="view-home">
+      <div class="home-grid">
+        <button class="home-card" onclick="mostrarQuadro()">
+          <div class="home-card-icone">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="5" height="16" rx="1"/><rect x="9.5" y="4" width="5" height="10" rx="1"/><rect x="16" y="4" width="5" height="13" rx="1"/></svg>
+          </div>
+          <div class="home-card-label">Visualizar quadro de ferramentas</div>
+        </button>
+        <button class="home-card" onclick="mostrarMovimentacao()">
+          <div class="home-card-icone">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h13M4 7l4-4M4 7l4 4"/><path d="M20 17H7M20 17l-4-4M20 17l-4 4"/></svg>
+          </div>
+          <div class="home-card-label">Adicionar nova movimentação</div>
+        </button>
+      </div>
+    </div>
+
+    <!-- ===================== QUADRO ===================== -->
+    <div class="view" id="view-quadro">
+      <div class="secao-header">
+        <h2>Quadro de ferramentas</h2>
+        <div class="modo-toggle">
+          <button class="modo-btn ativo" id="modoBtnKanban" onclick="definirModoVisualizacao('kanban')">Kanban</button>
+          <button class="modo-btn" id="modoBtnLista" onclick="definirModoVisualizacao('lista')">Lista</button>
+        </div>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi-card" style="--kpi-cor:var(--verde-principal);">
+          <div class="kpi-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.5 5.5L3 18v3h3l6.2-6.2a4 4 0 0 0 5.5-5.5l-3 3-2-2z"/></svg></div>
+          <div class="kpi-valor" id="kpiTotal">0</div>
+          <div class="kpi-label">Total de ferramentas</div>
+        </div>
+        <div class="kpi-card" style="--kpi-cor:var(--cinza-suave);">
+          <div class="kpi-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.5 5.5L3 18v3h3l6.2-6.2a4 4 0 0 0 5.5-5.5l-3 3-2-2z"/></svg></div>
+          <div class="kpi-valor" id="kpiManutencao">0</div>
+          <div class="kpi-label">Total em manutenção</div>
+        </div>
+        <div class="kpi-card" style="--kpi-cor:var(--erro);">
+          <div class="kpi-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="7" x2="12" y2="13"/><circle cx="12" cy="16.5" r="0.6" fill="currentColor" stroke="none"/></svg></div>
+          <div class="kpi-valor" id="kpiVermelha">0</div>
+          <div class="kpi-label">Vermelha — crítico</div>
+        </div>
+        <div class="kpi-card" style="--kpi-cor:var(--aviso);">
+          <div class="kpi-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 L22 20 L2 20 Z"/><line x1="12" y1="9" x2="12" y2="14"/><circle cx="12" cy="17" r="0.6" fill="currentColor" stroke="none"/></svg></div>
+          <div class="kpi-valor" id="kpiAmarela">0</div>
+          <div class="kpi-label">Amarela — condicional</div>
+        </div>
+        <div class="kpi-card" style="--kpi-cor:var(--sucesso);">
+          <div class="kpi-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 12 9 17 20 6"/></svg></div>
+          <div class="kpi-valor" id="kpiVerde">0</div>
+          <div class="kpi-label">Verde — liberada</div>
+        </div>
+      </div>
+
+      <div class="search-row">
+        <input type="text" id="campoBusca" placeholder="Buscar por nome..." oninput="renderBoard()">
+      </div>
+
+      <div class="board-wrap" id="wrapKanban">
+        <div class="board">
+          <div class="column col-vermelha">
+            <div class="column-head"><h2>Vermelha — crítico</h2><span class="count-badge" id="count-vermelha">0</span></div>
+            <div class="coluna-corpo" id="col-vermelha"></div>
+          </div>
+          <div class="column col-amarela">
+            <div class="column-head"><h2>Amarela — condicional</h2><span class="count-badge" id="count-amarela">0</span></div>
+            <div class="coluna-corpo" id="col-amarela"></div>
+          </div>
+          <div class="column col-verde">
+            <div class="column-head"><h2>Verde — liberada</h2><span class="count-badge" id="count-verde">0</span></div>
+            <div class="coluna-corpo" id="col-verde"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="lista-wrap" id="wrapLista" style="display:none;"></div>
+
+      <button class="fab" onclick="abrirModalNovaFerramenta()" aria-label="Nova ferramenta">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </button>
+    </div>
+
+    <!-- ===================== NOVA MOVIMENTAÇÃO ===================== -->
+    <div class="view" id="view-movimentacao">
+      <div class="secao-header">
+        <h2>Nova movimentação</h2>
+      </div>
+      <div class="search-row">
+        <input type="text" id="campoBuscaMov" placeholder="Buscar ferramenta..." oninput="renderizarPickerFerramentas()">
+      </div>
+      <div class="picker-lista" id="pickerFerramentas"></div>
+    </div>
+
+    <!-- ===================== RESPONSÁVEIS ===================== -->
+    <div class="view" id="view-responsaveis">
+      <div class="secao-header">
+        <h2>Responsáveis</h2>
+      </div>
+      <div class="secao-corpo">
+        <div class="simple-list" id="listaResponsaveis"></div>
+        <div class="form-add-responsavel">
+          <input type="text" id="novoResponsavelNome" placeholder="Nome do responsável">
+          <button class="btn btn-primary" onclick="adicionarResponsavel()">Adicionar</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ===================== MODAL: DETALHE ===================== -->
+<div class="overlay" id="overlayDetalhe">
+  <div class="modal">
+    <h3 id="detTitulo">—</h3>
+
+    <div class="visor">
+      <div class="visor-bloco">
+        <div class="visor-rotulo">Trimestre atual</div>
+        <div class="visor-trimestre" id="detVisorTrimestre">—</div>
+      </div>
+      <div class="visor-bloco">
+        <div class="visor-rotulo">Situação</div>
+        <div class="visor-situacao" id="detVisorSituacao"><span class="dot"></span><span>—</span></div>
+      </div>
+    </div>
+
+    <div class="field"><label>Nome</label><input type="text" id="detNome" onchange="salvarCadastro()"></div>
+    <div class="field"><label>Descrição (o que produz)</label><textarea id="detDescricao" onchange="salvarCadastro()"></textarea></div>
+    <div class="field" id="detWrapApta">
+      <label class="campo-apta">
+        <input type="checkbox" id="detApta" onchange="salvarApta()">
+        <span id="detAptaLabel">Apta para rodar</span>
+      </label>
+    </div>
+    <button class="btn btn-primary btn-block" onclick="abrirModalEvento()">+ Registrar evento</button>
+    <div class="section-title">Histórico</div>
+    <div class="hist-timeline" id="timelineEventos"></div>
+    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('overlayDetalhe')">Fechar</button></div>
+  </div>
+</div>
+
+<!-- ===================== MODAL: NOVA FERRAMENTA ===================== -->
+<div class="overlay" id="overlayNovaFerramenta">
+  <div class="modal">
+    <h3>Nova ferramenta</h3>
+    <div class="field"><label>Nome</label><input type="text" id="nfNome"></div>
+    <div class="field"><label>Descrição</label><textarea id="nfDescricao"></textarea></div>
+    <div class="field">
+      <label>Estado inicial</label>
+      <select id="nfEstado">
+        <option value="verde">Verde — liberada</option>
+        <option value="amarela">Amarela — condicional</option>
+        <option value="vermelha">Vermelha — problemática</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('overlayNovaFerramenta')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarNovaFerramenta()">Criar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODAL: REGISTRAR EVENTO ===================== -->
+<div class="overlay" id="overlayEvento">
+  <div class="modal">
+    <h3 id="evTitulo">Registrar evento</h3>
+    <div class="field"><label>Responsável</label><select id="evResponsavel"></select></div>
+    <div class="field">
+      <label>Tipo de evento</label>
+      <select id="evTipo">
+        <option>Inspeção de saída da injetora</option>
+        <option>Jateamento / limpeza</option>
+        <option>Ajuste</option>
+        <option>Troca de componente</option>
+        <option>Mudança de etiqueta</option>
+        <option>Observação</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Alterar estado (opcional)</label>
+      <select id="evEstado">
+        <option value="">Manter estado atual</option>
+        <option value="verde">Verde — liberada</option>
+        <option value="amarela">Amarela — condicional</option>
+        <option value="vermelha">Vermelha — problemática</option>
+      </select>
+    </div>
+    <div class="field"><label>Descrição</label><textarea id="evTexto" placeholder="O que foi verificado ou feito..."></textarea></div>
+    <div class="field">
+      <label>Fotos</label>
+      <div class="file-input-wrap">
+        <label class="file-input-btn" for="evFotos">📷 Escolher fotos</label>
+        <span class="file-input-name" id="evFotosNome">Nenhuma foto selecionada</span>
+      </div>
+      <input type="file" id="evFotos" accept="image/*" capture="environment" multiple class="file-input-hidden" onchange="previsualizarFotos()">
+      <div class="img-preview-row" id="evFotosPreview"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('overlayEvento')">Cancelar</button>
+      <button class="btn btn-primary" id="btnSalvarEvento" onclick="salvarEvento()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   CONFIGURAÇÃO — troque pelos dados do projeto Supabase.
+   ============================================================ */
+const SUPABASE_URL = 'SUPABASE_URL_PLACEHOLDER';
+const SUPABASE_ANON_KEY = 'SUPABASE_ANON_KEY_PLACEHOLDER';
+
+let sb = null;
+if (!SUPABASE_URL.includes('PLACEHOLDER') && !SUPABASE_ANON_KEY.includes('PLACEHOLDER')) {
+  sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+}
+
+function atualizarAvisoConfig() {
+  document.getElementById('avisoConfig').style.display = sb ? 'none' : 'block';
+}
+
+const BUCKET_FOTOS = 'ferramental-fotos';
+const ESTADO_LABEL = { verde: 'Verde — liberada', amarela: 'Amarela — condicional', vermelha: 'Vermelha — problemática' };
+const ESTADO_COR_VAR = { verde: 'var(--sucesso)', amarela: 'var(--aviso)', vermelha: 'var(--erro)' };
+const ESTADO_CLASSE = { verde: 'sucesso', amarela: 'aviso', vermelha: 'erro' };
+const ORDEM_ESTADO = { vermelha: 0, amarela: 1, verde: 2 };
+
+const ICONE_SVG = {
+  sucesso: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 12 9 17 20 6"/></svg>',
+  aviso: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 L22 20 L2 20 Z"/><line x1="12" y1="9" x2="12" y2="14"/><circle cx="12" cy="17" r="0.6" fill="currentColor" stroke="none"/></svg>',
+  erro: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="7" x2="12" y2="13"/><circle cx="12" cy="16.5" r="0.6" fill="currentColor" stroke="none"/></svg>',
+};
+
+let ferramentasCache = [];
+let responsaveisCache = [];
+let ferramentaAtualId = null;
+
+/* ---------- trimestre calculado a partir do calendário ---------- */
+function trimestreAtual() {
+  const agora = new Date();
+  return { trimestre: Math.floor(agora.getMonth() / 3) + 1, ano: agora.getFullYear() };
+}
+function trimestreLabel() {
+  const { trimestre, ano } = trimestreAtual();
+  return `${trimestre}º Trimestre de ${ano}`;
+}
+function trimestreLabelCurto() {
+  const { trimestre, ano } = trimestreAtual();
+  return `${trimestre}º TRI/${ano}`;
+}
+function atualizarVisorTopbar() {
+  const { trimestre, ano } = trimestreAtual();
+  document.getElementById('visorMiniTopbar').textContent = `${trimestre}º TRI / ${ano}`;
+}
+
+/* ---------- utilidades ---------- */
+function showToast(msg, kind, ms) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + (kind || '');
+  setTimeout(() => { t.className = 'toast'; }, ms || 3200);
+}
+
+function openModal(id) {
+  document.getElementById(id).classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('show');
+  if (!document.querySelector('.overlay.show')) document.body.style.overflow = '';
+}
+
+function escapeHtml(s) {
+  if (s === null || s === undefined) return '';
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function formatarData(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString('pt-BR') + ' às ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function emptyHintHtml(msg) {
+  return `<div class="empty-hint">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+    <div>${msg}</div>
+  </div>`;
+}
+
+/* ---------- navegação entre telas ---------- */
+function mostrarView(nome) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('ativa'));
+  document.getElementById('view-' + nome).classList.add('ativa');
+}
+
+function definirSidebar(visivel, itemAtivoId) {
+  document.getElementById('sidebar').classList.toggle('ativa', visivel);
+  document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('ativo'));
+  if (itemAtivoId) document.getElementById(itemAtivoId).classList.add('ativo');
+}
+
+function mostrarHome() {
+  document.getElementById('topoApp').style.display = 'flex';
+  atualizarAvisoConfig();
+  mostrarView('home');
+  definirSidebar(false, null);
+}
+function mostrarQuadro() {
+  mostrarView('quadro');
+  definirSidebar(true, 'sbQuadro');
+  renderBoard();
+}
+function mostrarMovimentacao() {
+  mostrarView('movimentacao');
+  definirSidebar(true, 'sbMovimentacao');
+  renderizarPickerFerramentas();
+}
+function mostrarResponsaveis() {
+  mostrarView('responsaveis');
+  definirSidebar(true, 'sbResponsaveis');
+  renderizarListaResponsaveis();
+}
+
+function definirModoVisualizacao(modo) {
+  document.getElementById('modoBtnKanban').classList.toggle('ativo', modo === 'kanban');
+  document.getElementById('modoBtnLista').classList.toggle('ativo', modo === 'lista');
+  document.getElementById('wrapKanban').style.display = modo === 'kanban' ? 'block' : 'none';
+  document.getElementById('wrapLista').style.display = modo === 'lista' ? 'block' : 'none';
+  renderBoard();
+}
+
+/* ---------- carregamento ---------- */
+async function carregarFerramentas() {
+  if (!sb) return;
+  const { data, error } = await sb.from('ferramentas').select('*').order('atualizado_em', { ascending: false });
+  if (error) { showToast('Erro ao carregar ferramentas', 'err'); console.error(error); return; }
+  ferramentasCache = data || [];
+  atualizarKpis();
+  renderBoard();
+}
+
+async function carregarResponsaveis() {
+  if (!sb) return;
+  const { data, error } = await sb.from('responsaveis').select('*').order('nome');
+  if (error) { console.error(error); return; }
+  responsaveisCache = data || [];
+}
+
+function atualizarKpis() {
+  document.getElementById('kpiTotal').textContent = ferramentasCache.length;
+  document.getElementById('kpiManutencao').textContent = ferramentasCache.filter(f => !f.apta_para_rodar).length;
+  document.getElementById('kpiVermelha').textContent = ferramentasCache.filter(f => f.estado_atual === 'vermelha').length;
+  document.getElementById('kpiAmarela').textContent = ferramentasCache.filter(f => f.estado_atual === 'amarela').length;
+  document.getElementById('kpiVerde').textContent = ferramentasCache.filter(f => f.estado_atual === 'verde').length;
+}
+
+function itensFiltrados() {
+  const busca = document.getElementById('campoBusca').value.trim().toLowerCase();
+  if (!busca) return ferramentasCache.slice();
+  return ferramentasCache.filter(f => f.nome.toLowerCase().includes(busca));
+}
+
+function ordenarPorUrgencia(lista) {
+  return lista.slice().sort((a, b) => {
+    if (a.apta_para_rodar !== b.apta_para_rodar) return a.apta_para_rodar ? 1 : -1;
+    return ORDEM_ESTADO[a.estado_atual] - ORDEM_ESTADO[b.estado_atual];
+  });
+}
+
+/* ---------- kanban + lista ---------- */
+function renderBoard() {
+  const filtrados = itensFiltrados();
+  const kanbanAtivo = document.getElementById('wrapKanban').style.display !== 'none';
+
+  if (kanbanAtivo) {
+    const grupos = { vermelha: [], amarela: [], verde: [] };
+    filtrados.forEach(f => (grupos[f.estado_atual] || grupos.verde).push(f));
+    ['vermelha', 'amarela', 'verde'].forEach(estado => {
+      const lista = ordenarPorUrgencia(grupos[estado]);
+      document.getElementById('count-' + estado).textContent = lista.length;
+      const body = document.getElementById('col-' + estado);
+      body.innerHTML = lista.length ? lista.map(cardHtml).join('') : emptyHintHtml('Nenhuma ferramenta aqui');
+    });
+  } else {
+    const lista = ordenarPorUrgencia(filtrados);
+    const wrap = document.getElementById('wrapLista');
+    wrap.innerHTML = lista.length ? lista.map(linhaHtml).join('') : emptyHintHtml('Nenhuma ferramenta encontrada');
+  }
+}
+
+function cardHtml(f) {
+  const classeIcone = ESTADO_CLASSE[f.estado_atual];
+  return `<div class="ferramenta-card estado-${f.estado_atual}${f.apta_para_rodar ? '' : ' nao-apta'}" onclick="abrirDetalhe('${f.id}')">
+    <div class="card-top">
+      <div class="status-icon ${classeIcone}">${ICONE_SVG[classeIcone]}</div>
+      <div class="card-top-texto">
+        <span class="card-nome">${escapeHtml(f.nome)}</span>
+        ${f.descricao ? `<div class="card-descricao">${escapeHtml(f.descricao)}</div>` : ''}
+      </div>
+    </div>
+    <div class="card-tags">
+      <span class="pill ${f.apta_para_rodar ? 'pill-apta' : 'pill-nao-apta'}">${f.apta_para_rodar ? 'Apta' : '<span class="pulso"></span>Não apta'}</span>
+      <span class="pill pill-trimestre">${trimestreLabelCurto()}</span>
+    </div>
+  </div>`;
+}
+
+function linhaHtml(f) {
+  return `<div class="linha-ferramenta linha-${f.estado_atual}" onclick="abrirDetalhe('${f.id}')">
+    <div class="linha-corpo">
+      <div class="linha-nome">${escapeHtml(f.nome)}</div>
+      ${f.descricao ? `<div class="linha-descricao">${escapeHtml(f.descricao)}</div>` : ''}
+    </div>
+    <span class="pill ${f.apta_para_rodar ? 'pill-apta' : 'pill-nao-apta'}">${f.apta_para_rodar ? 'Apta' : '<span class="pulso"></span>Não apta'}</span>
+    <span class="pill pill-trimestre">${trimestreLabelCurto()}</span>
+  </div>`;
+}
+
+/* ---------- picker (nova movimentação) ---------- */
+function renderizarPickerFerramentas() {
+  const busca = document.getElementById('campoBuscaMov').value.trim().toLowerCase();
+  const lista = ordenarPorUrgencia(ferramentasCache.filter(f => !busca || f.nome.toLowerCase().includes(busca)));
+  const container = document.getElementById('pickerFerramentas');
+  if (!lista.length) { container.innerHTML = emptyHintHtml('Nenhuma ferramenta encontrada'); return; }
+  container.innerHTML = lista.map(f => `
+    <div class="picker-item" onclick="abrirModalEvento('${f.id}')">
+      <span class="status-dot ${ESTADO_CLASSE[f.estado_atual]}"></span>
+      <span class="picker-nome">${escapeHtml(f.nome)}</span>
+      <span class="picker-situacao">${f.apta_para_rodar ? 'Apta' : 'Não apta'}</span>
+    </div>
+  `).join('');
+}
+
+/* ---------- detalhe ---------- */
+async function abrirDetalhe(id) {
+  ferramentaAtualId = id;
+  const f = ferramentasCache.find(x => x.id === id);
+  if (!f) return;
+
+  document.getElementById('detTitulo').textContent = f.nome;
+  document.getElementById('detNome').value = f.nome || '';
+  document.getElementById('detDescricao').value = f.descricao || '';
+
+  document.getElementById('detVisorTrimestre').textContent = trimestreLabel();
+  const situacao = document.getElementById('detVisorSituacao');
+  situacao.innerHTML = `<span class="dot" style="background:${ESTADO_COR_VAR[f.estado_atual]};"></span><span style="color:${ESTADO_COR_VAR[f.estado_atual]}">${ESTADO_LABEL[f.estado_atual]}</span>`;
+
+  const apta = document.getElementById('detApta');
+  apta.checked = f.apta_para_rodar;
+  const podeEditar = f.estado_atual === 'amarela';
+  apta.disabled = !podeEditar;
+  document.getElementById('detWrapApta').style.opacity = podeEditar ? '1' : '.5';
+  document.getElementById('detAptaLabel').textContent = podeEditar
+    ? 'Apta para rodar'
+    : `Apta para rodar (fixo em ${f.estado_atual})`;
+
+  openModal('overlayDetalhe');
+  await carregarHistorico(id);
+}
+
+async function salvarCadastro() {
+  if (!ferramentaAtualId) return;
+  const payload = {
+    nome: document.getElementById('detNome').value.trim(),
+    descricao: document.getElementById('detDescricao').value.trim(),
+  };
+  const { error } = await sb.from('ferramentas').update(payload).eq('id', ferramentaAtualId);
+  if (error) { showToast('Erro ao salvar', 'err'); console.error(error); return; }
+  showToast('Cadastro atualizado');
+  document.getElementById('detTitulo').textContent = payload.nome;
+  await carregarFerramentas();
+}
+
+async function salvarApta() {
+  if (!ferramentaAtualId) return;
+  const valor = document.getElementById('detApta').checked;
+  const { error } = await sb.from('ferramentas').update({ apta_para_rodar: valor }).eq('id', ferramentaAtualId);
+  if (error) { showToast('Erro ao salvar', 'err'); console.error(error); return; }
+  showToast(valor ? 'Marcada como apta' : 'Marcada como não apta');
+  await carregarFerramentas();
+}
+
+/* ---------- histórico ---------- */
+async function carregarHistorico(ferramentaId) {
+  const container = document.getElementById('timelineEventos');
+  const { data, error } = await sb
+    .from('historico_ferramenta')
+    .select('*, historico_fotos(*), responsaveis(nome)')
+    .eq('ferramenta_id', ferramentaId)
+    .order('criado_em', { ascending: false });
+
+  if (error) { container.innerHTML = '<div class="empty-hint">Erro ao carregar histórico.</div>'; console.error(error); return; }
+  if (!data || data.length === 0) { container.innerHTML = '<div class="empty-hint">Nenhum evento registrado ainda.</div>'; return; }
+
+  container.innerHTML = data.map(ev => {
+    const cor = ev.estado_resultante ? ESTADO_COR_VAR[ev.estado_resultante] : 'var(--borda)';
+    const corTitulo = ev.estado_resultante ? cor : 'var(--texto-secundario)';
+    return `<div class="hist-step">
+      <div class="hist-step-dot" style="background:${cor};"></div>
+      <div class="hist-step-content">
+        <div class="hist-step-title" style="color:${corTitulo}">${escapeHtml(ev.tipo_evento)}${ev.estado_resultante ? ' → ' + ESTADO_LABEL[ev.estado_resultante] : ''}</div>
+        <div class="hist-step-meta">${formatarData(ev.criado_em)}${ev.responsaveis ? ' — ' + escapeHtml(ev.responsaveis.nome) : ''}</div>
+        ${ev.texto ? `<div class="hist-step-note">${escapeHtml(ev.texto)}</div>` : ''}
+        ${(ev.historico_fotos || []).map(f => `<a class="attach-thumb" href="${f.url}" target="_blank" rel="noopener"><img src="${f.url}" alt="Foto do evento" loading="lazy"></a>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ---------- modal: registrar evento ---------- */
+let arquivosEventoSelecionados = [];
+
+function abrirModalEvento(id) {
+  if (id) ferramentaAtualId = id;
+  if (!ferramentaAtualId) return;
+  const f = ferramentasCache.find(x => x.id === ferramentaAtualId);
+  document.getElementById('evTitulo').textContent = f ? `Registrar evento — ${f.nome}` : 'Registrar evento';
+
+  const select = document.getElementById('evResponsavel');
+  select.innerHTML = responsaveisCache.filter(r => r.ativo).map(r => `<option value="${r.id}">${escapeHtml(r.nome)}</option>`).join('');
+  document.getElementById('evTipo').selectedIndex = 0;
+  document.getElementById('evEstado').value = '';
+  document.getElementById('evTexto').value = '';
+  document.getElementById('evFotos').value = '';
+  document.getElementById('evFotosNome').textContent = 'Nenhuma foto selecionada';
+  document.getElementById('evFotosPreview').innerHTML = '';
+  arquivosEventoSelecionados = [];
+  openModal('overlayEvento');
+}
+
+function previsualizarFotos() {
+  const input = document.getElementById('evFotos');
+  arquivosEventoSelecionados = Array.from(input.files || []);
+  document.getElementById('evFotosNome').textContent = arquivosEventoSelecionados.length
+    ? `${arquivosEventoSelecionados.length} foto(s) selecionada(s)`
+    : 'Nenhuma foto selecionada';
+
+  const preview = document.getElementById('evFotosPreview');
+  preview.innerHTML = '';
+  arquivosEventoSelecionados.forEach(arquivo => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = document.createElement('img');
+      img.src = e.target.result;
+      preview.appendChild(img);
+    };
+    reader.readAsDataURL(arquivo);
+  });
+}
+
+async function salvarEvento() {
+  if (!ferramentaAtualId) return;
+  const btn = document.getElementById('btnSalvarEvento');
+  btn.disabled = true;
+  btn.textContent = 'Salvando...';
+
+  const responsavelId = document.getElementById('evResponsavel').value || null;
+  const tipoEvento = document.getElementById('evTipo').value;
+  const estado = document.getElementById('evEstado').value || null;
+  const texto = document.getElementById('evTexto').value.trim();
+
+  const { data: novoEvento, error } = await sb.from('historico_ferramenta').insert({
+    ferramenta_id: ferramentaAtualId,
+    responsavel_id: responsavelId,
+    tipo_evento: tipoEvento,
+    estado_resultante: estado,
+    texto: texto || null,
+  }).select().single();
+
+  if (error) {
+    showToast('Erro ao salvar evento', 'err');
+    console.error(error);
+    btn.disabled = false;
+    btn.textContent = 'Salvar';
+    return;
+  }
+
+  for (const arquivo of arquivosEventoSelecionados) {
+    const caminho = `${ferramentaAtualId}/${novoEvento.id}/${Date.now()}_${arquivo.name}`;
+    const { error: erroUpload } = await sb.storage.from(BUCKET_FOTOS).upload(caminho, arquivo);
+    if (erroUpload) { console.error(erroUpload); continue; }
+    const { data: urlData } = sb.storage.from(BUCKET_FOTOS).getPublicUrl(caminho);
+    await sb.from('historico_fotos').insert({ historico_id: novoEvento.id, url: urlData.publicUrl });
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Salvar';
+  closeModal('overlayEvento');
+  showToast('Evento registrado');
+  await carregarFerramentas();
+
+  const detalheAberto = document.getElementById('overlayDetalhe').classList.contains('show');
+  if (detalheAberto) {
+    await abrirDetalhe(ferramentaAtualId);
+  } else if (document.getElementById('view-movimentacao').classList.contains('ativa')) {
+    renderizarPickerFerramentas();
+  }
+}
+
+/* ---------- modal: nova ferramenta ---------- */
+function abrirModalNovaFerramenta() {
+  document.getElementById('nfNome').value = '';
+  document.getElementById('nfDescricao').value = '';
+  document.getElementById('nfEstado').value = 'verde';
+  openModal('overlayNovaFerramenta');
+}
+
+async function salvarNovaFerramenta() {
+  const nome = document.getElementById('nfNome').value.trim();
+  if (!nome) { showToast('Preencha o nome da ferramenta', 'err'); return; }
+
+  const estado = document.getElementById('nfEstado').value;
+
+  const { error } = await sb.from('ferramentas').insert({
+    nome,
+    descricao: document.getElementById('nfDescricao').value.trim() || null,
+    estado_atual: estado,
+    apta_para_rodar: estado !== 'vermelha',
+  });
+
+  if (error) {
+    showToast('Erro ao criar ferramenta', 'err');
+    console.error(error);
+    return;
+  }
+
+  closeModal('overlayNovaFerramenta');
+  showToast('Ferramenta criada');
+  carregarFerramentas();
+}
+
+/* ---------- responsáveis (seção) ---------- */
+function renderizarListaResponsaveis() {
+  const container = document.getElementById('listaResponsaveis');
+  if (responsaveisCache.length === 0) {
+    container.innerHTML = '<div class="empty-hint">Nenhum responsável cadastrado ainda.</div>';
+    return;
+  }
+  container.innerHTML = responsaveisCache.map(r => `
+    <div class="simple-row">
+      <span class="${r.ativo ? '' : 'inativo'}">${escapeHtml(r.nome)}</span>
+      <button class="btn-icon" onclick="alternarResponsavel('${r.id}', ${!r.ativo})">${r.ativo ? 'Desativar' : 'Reativar'}</button>
+    </div>
+  `).join('');
+}
+
+async function adicionarResponsavel() {
+  const campo = document.getElementById('novoResponsavelNome');
+  const nome = campo.value.trim();
+  if (!nome) return;
+  const { error } = await sb.from('responsaveis').insert({ nome });
+  if (error) { showToast('Erro ao adicionar', 'err'); console.error(error); return; }
+  campo.value = '';
+  await carregarResponsaveis();
+  renderizarListaResponsaveis();
+}
+
+async function alternarResponsavel(id, novoValor) {
+  const { error } = await sb.from('responsaveis').update({ ativo: novoValor }).eq('id', id);
+  if (error) { showToast('Erro ao atualizar', 'err'); console.error(error); return; }
+  await carregarResponsaveis();
+  renderizarListaResponsaveis();
+}
+
+/* ---------- inicialização ---------- */
+document.getElementById('topoApp').style.display = 'none';
+atualizarVisorTopbar();
+(async function init() {
+  if (!sb) return;
+  await Promise.all([carregarFerramentas(), carregarResponsaveis()]);
+})();
+</script>
+</body>
+</html>
